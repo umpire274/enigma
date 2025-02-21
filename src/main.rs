@@ -5,7 +5,7 @@ use enigma::enigma::EnigmaMachine;
 
 fn main() {
     // Carichiamo la configurazione di Enigma da JSON
-    let enigma = EnigmaMachine::from_config("config.json")
+    let mut enigma = EnigmaMachine::from_config("config.json")
         .expect("Errore nel caricamento della configurazione!");
 
     // Chiediamo all'utente il messaggio da cifrare
