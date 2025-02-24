@@ -1,4 +1,8 @@
 use super::{plugboard::Plugboard, reflector::Reflector, rotor::Rotor};
+use chrono::prelude::*;
+use log::debug;
+use rand::rngs::StdRng;
+use rand::{seq::SliceRandom, SeedableRng};
 use serde::Deserialize;
 use std::fs;
 
@@ -6,21 +10,21 @@ use std::fs;
 ///
 /// This struct is used to deserialize the configuration from a file (e.g., JSON)
 /// and contains all the necessary components to set up the machine:
-/// - Rotor wirings and notches.
-/// - Reflector wiring.
+/// - Number of rotors and their notches.
 /// - Plugboard pairings.
+/// - A seed value for generating random rotors and reflectors.
 ///
 /// # Fields
-/// - `rotors`: A vector of strings, where each string represents the wiring of a rotor.
+/// - `n_rt`: The number of rotors to generate.
 /// - `notches`: A vector of characters, where each character represents the notch position of a rotor.
-/// - `reflector`: A string representing the wiring of the reflector.
 /// - `plugboard_pairs`: A vector of character pairs representing the plugboard connections.
+/// - `sstk`: A seed value used for random generation of rotors and reflectors.
 #[derive(Deserialize)]
 pub struct Config {
-    rotors: Vec<String>,
+    n_rt: usize,
     notches: Vec<char>,
-    reflector: String,
     plugboard_pairs: Vec<(char, char)>,
+    sstk: usize,
 }
 
 /// Represents an Enigma machine with its core components.
@@ -44,15 +48,11 @@ impl EnigmaMachine {
     /// Initializes a new Enigma machine from a configuration file.
     ///
     /// This function reads a JSON configuration file containing the settings for the Enigma machine,
-    /// including rotor wirings, notch positions, reflector wiring, and plugboard pairings. It then
-    /// constructs and returns an `EnigmaMachine` instance based on the provided configuration.
+    /// including the number of rotors, notch positions, plugboard pairings, and a seed for random generation.
+    /// It then constructs and returns an `EnigmaMachine` instance based on the provided configuration.
     ///
     /// # Arguments
-    /// * `file_path` - The path to the JSON configuration file. The file should contain the following fields:
-    ///   - `rotors`: A list of strings, where each string represents the wiring of a rotor.
-    ///   - `notches`: A list of characters, where each character represents the notch position of a rotor.
-    ///   - `reflector`: A string representing the wiring of the reflector.
-    ///   - `plugboard_pairs`: A list of character pairs representing the plugboard connections.
+    /// * `file_path` - The path to the JSON configuration file.
     ///
     /// # Errors
     /// Returns an error in the following cases:
@@ -70,19 +70,26 @@ impl EnigmaMachine {
         let config_str = fs::read_to_string(file_path)?;
         let config: Config = serde_json::from_str(&config_str)?;
 
+        let mut rotors: Vec<String> = Vec::new();
+        for idx_rotor in 1..=config.n_rt {
+            let rotor = Self::generate_rotor(config.sstk, idx_rotor);
+            rotors.push(rotor);
+            debug!("rotor nr.{}: {}", idx_rotor, rotors[idx_rotor - 1]);
+        }
+        let reflt = Self::generate_reflector(config.n_rt);
+
         // Check that the number of rotors and notches is the same
-        if config.rotors.len() != config.notches.len() {
+        if rotors.len() != config.notches.len() {
             return Err("The number of rotors and notches must be the same".into());
         }
 
-        let rotors = config
-            .rotors
+        let rotors = rotors
             .iter()
             .zip(&config.notches)
             .map(|(wiring, &notch)| Rotor::new(wiring, notch, 'A'))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let reflector = Reflector::new(&config.reflector)?;
+        let reflector = Reflector::new(reflt.as_str())?;
         let plugboard = Plugboard::new(config.plugboard_pairs)?;
 
         Ok(Self {
@@ -153,12 +160,12 @@ impl EnigmaMachine {
     /// ```
     fn format_dashed(&self, text: &str) -> String {
         text.chars()
-            .filter(|c| c.is_ascii_uppercase()) // Filters out non-uppercase ASCII characters and spaces
-            .collect::<Vec<_>>() // Collects the filtered characters into a vector
-            .chunks(4) // Splits the vector into chunks of 4 characters each
-            .map(|chunk| chunk.iter().collect::<String>()) // Converts each chunk into a string
-            .collect::<Vec<_>>() // Collects the chunk strings into a vector
-            .join("-") // Joins the chunk strings with dashes
+            .filter(|c| c.is_ascii_uppercase())
+            .collect::<Vec<_>>()
+            .chunks(4)
+            .map(|chunk| chunk.iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .join("-")
     }
 
     /// Removes dashes from the input text and joins all characters into a continuous string.
@@ -175,19 +182,20 @@ impl EnigmaMachine {
     /// assert_eq!(continuous, "HELLOWORLD");
     /// ```
     pub fn format_continuous(&self, text: &str) -> String {
-        text.chars()
-            .filter(|c| *c != '-') // Filters out dashes from the input text
-            .collect::<String>() // Collects the remaining characters into a single string
+        text.chars().filter(|c| *c != '-').collect::<String>()
     }
 
     /// Encrypts a message and formats the output based on the presence of dashes.
+    ///
+    /// This function processes the input message, encrypts it using the Enigma machine, and formats
+    /// the output either as a continuous string (if dashes are present) or as dashed quartets (if no dashes are present).
     ///
     /// # Arguments
     /// * `text` - The message to be encrypted.
     ///
     /// # Returns
-    /// A `Result` containing the encrypted message formatted either as a continuous string (if dashes are present)
-    /// or as dashed quartets (if no dashes are present). Returns an error if the message contains invalid characters.
+    /// - `Ok(String)`: The encrypted message, formatted as specified.
+    /// - `Err(&'static str)`: An error message if the input contains invalid characters.
     ///
     /// # Example
     /// ```rust
@@ -197,23 +205,22 @@ impl EnigmaMachine {
     /// ```
     pub fn encrypt_message(&mut self, text: &str) -> Result<String, &'static str> {
         let mut result = String::new();
-        let mut is_cyphred = false; // Flag to check if the input contains dashes
+        let mut is_cyphred = false;
 
         for c in text.chars() {
             if c.is_ascii_alphabetic() {
-                self.step_rotors(); // Rotates the rotors before encrypting
+                self.step_rotors();
                 let encrypted_char = self.encrypt(&c.to_ascii_uppercase().to_string())?;
                 result.push(encrypted_char.chars().next().unwrap());
             } else if c == '-' {
-                is_cyphred = true; // Sets the flag if a dash is encountered
+                is_cyphred = true;
             }
         }
 
-        // Format the output based on the presence of dashes
         if is_cyphred {
-            Ok(self.format_continuous(&result)) // Returns a continuous string if dashes were present
+            Ok(self.format_continuous(&result))
         } else {
-            Ok(self.format_dashed(&result)) // Returns dashed quartets if no dashes were present
+            Ok(self.format_dashed(&result))
         }
     }
 
@@ -227,15 +234,64 @@ impl EnigmaMachine {
     /// - The rotation starts from the first rotor and propagates to the next rotor only if the current rotor's notch is engaged.
     /// - If a rotor does not need to rotate (i.e., its notch is not engaged), the rotation process stops.
     fn step_rotors(&mut self) {
-        let mut rotate_next = true; // The first rotor always rotates
+        let mut rotate_next = true;
         for i in 0..self.rotors.len() {
             if rotate_next {
-                // Rotate the current rotor and check if the next rotor should also rotate
                 rotate_next = self.rotors[i].rotate();
             } else {
-                // If a rotor does not rotate, stop the process
                 break;
             }
         }
+    }
+
+    /// Generates a random rotor wiring based on a seed and rotor index.
+    ///
+    /// This function uses the current date and a seed value to generate a unique wiring for each rotor.
+    ///
+    /// # Arguments
+    /// * `sstk` - A seed value used for random generation.
+    /// * `rotor_index` - The index of the rotor (used to ensure unique wiring for each rotor).
+    ///
+    /// # Returns
+    /// A `String` representing the wiring of the rotor.
+    fn generate_rotor(sstk: usize, rotor_index: usize) -> String {
+        let dmy = Local::now();
+        let p1 = dmy.day() as u64;
+        let p2 = dmy.month() as u64;
+        let p3 = dmy.year() as u64;
+        let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + rotor_index as u64;
+        let mut rng = StdRng::seed_from_u64(seed);
+        let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
+        alphabet.shuffle(&mut rng);
+        alphabet.into_iter().collect()
+    }
+
+    /// Generates a random reflector wiring based on a seed.
+    ///
+    /// This function uses the current date and a seed value to generate a unique wiring for the reflector.
+    ///
+    /// # Arguments
+    /// * `sstk` - A seed value used for random generation.
+    ///
+    /// # Returns
+    /// A `String` representing the wiring of the reflector.
+    fn generate_reflector(sstk: usize) -> String {
+        let dmy = Local::now();
+        let p1 = dmy.day() as u64;
+        let p2 = dmy.month() as u64;
+        let p3 = dmy.year() as u64;
+        let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3;
+        let mut rng = StdRng::seed_from_u64(seed);
+
+        let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
+        alphabet.shuffle(&mut rng);
+
+        let mut reflector = vec![' '; 26];
+        for i in (0..26).step_by(2) {
+            reflector[alphabet[i] as usize - 'A' as usize] = alphabet[i + 1];
+            reflector[alphabet[i + 1] as usize - 'A' as usize] = alphabet[i];
+        }
+
+        reflector.into_iter().collect()
     }
 }

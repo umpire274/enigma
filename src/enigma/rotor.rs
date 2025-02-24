@@ -63,6 +63,7 @@ impl Rotor {
         })
     }
 
+    /// Encrypts a character in the forward direction (right to left).
     ///
     /// # Arguments
     /// * `c` - The character to encrypt (must be an ASCII uppercase letter).

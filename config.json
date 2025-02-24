@@ -1,14 +1,10 @@
 {
-  "rotors": [
-	"EKMFLGDQVZNTOWYHXUSPAIBRCJ",
-	"AJDKSIRUXBLHWTMCQGZNPYFVOE",
-	"BDFHJLCPRTXVZNYEIWGAKMUSQO"
-  ],
+  "n_rt": 3,
   "notches": ["Q", "E", "V"],
-  "reflector": "YRUHQSLDPXNGOKMIEBFZCWVJAT",
   "plugboard_pairs": [
 	["A", "B"],
 	["C", "D"],
 	["E", "F"]
-  ]
+  ],
+  "sstk": 150
 }

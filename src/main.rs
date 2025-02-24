@@ -10,6 +10,7 @@ mod cli;
 mod enigma;
 
 use enigma::enigma::EnigmaMachine;
+use log::info;
 
 /// Main entry point of the program.
 ///
@@ -29,6 +30,9 @@ use enigma::enigma::EnigmaMachine;
 /// Encrypted text: RFKTZ
 /// ```
 fn main() {
+    env_logger::init();
+    info!("Starting application...");
+
     // Load Enigma configuration from JSON
     let mut enigma =
         EnigmaMachine::from_config("config.json").expect("Error loading configuration!");
@@ -41,4 +45,6 @@ fn main() {
 
     // Display the result to the user
     cli::display_output(&encrypted_text);
+
+    info!("Application ended.");
 }
