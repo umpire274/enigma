@@ -78,7 +78,7 @@ impl EnigmaMachine {
     }
 
     /// Formatta l'output in quartine separate da '-'.
-    fn format_output(&self, text: &str) -> String {
+    fn format_dashed(&self, text: &str) -> String {
         text.chars()
             .filter(|c| c.is_ascii_uppercase()) // Rimuove spazi e caratteri non validi
             .collect::<Vec<_>>() // Converte in un vettore di caratteri
@@ -86,6 +86,19 @@ impl EnigmaMachine {
             .map(|chunk| chunk.iter().collect::<String>()) // Trasforma ogni gruppo in stringa
             .collect::<Vec<_>>() // Converte tutto in un vettore di stringhe
             .join("-") // Unisce le quartine con '-'
+    }
+
+    /// Formatta l'output rimuovendo i trattini e unendo tutti i caratteri.
+    ///
+    /// # Argomenti
+    /// * `text` - Il messaggio formattato con trattini.
+    ///
+    /// # Restituisce
+    /// Il messaggio con tutti i caratteri attaccati.
+    pub fn format_continuous(&self, text: &str) -> String {
+        text.chars()
+            .filter(|c| *c != '-') // Rimuove i trattini
+            .collect::<String>() // Unisce i caratteri in una stringa
     }
 
     /// Cifra un messaggio e formatta l'output.
@@ -97,14 +110,21 @@ impl EnigmaMachine {
     /// Il messaggio cifrato formattato, o un errore se il messaggio contiene caratteri non validi.
     pub fn encrypt_message(&mut self, text: &str) -> Result<String, &'static str> {
         let mut result = String::new();
+        let mut is_cyphred = false;
         for c in text.chars() {
             if c.is_ascii_alphabetic() {
                 self.step_rotors(); // Ruota i rotori prima di cifrare
                 let encrypted_char = self.encrypt(&c.to_ascii_uppercase().to_string())?;
                 result.push(encrypted_char.chars().next().unwrap());
+            } else if c == '-' {
+                is_cyphred = true;
             }
         }
-        Ok(self.format_output(&result))
+        if is_cyphred {
+            Ok(self.format_continuous(&result))
+        } else {
+            Ok(self.format_dashed(&result))
+        }
     }
 
     /// Ruota i rotori in base alle loro posizioni e notches.
