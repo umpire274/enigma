@@ -9,6 +9,9 @@ pub fn get_user_input(prompt: &str) -> String {
 	input.trim().to_uppercase() // Convertiamo tutto in maiuscolo
 }
 
-pub fn display_output(encrypted_text: &str) {
-	println!("Testo cifrato: {}", encrypted_text);
+pub fn display_output(encrypted_text: &Result<String, &str>) {
+	match encrypted_text {
+		Ok(text) => println!("Testo cifrato: {}", text),
+		Err(err) => println!("Errore: {}", err),
+	}
 }
