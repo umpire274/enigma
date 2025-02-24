@@ -1,31 +1,40 @@
 #[derive(Debug)]
 pub struct Reflector {
-	mapping: [char; 26], // Usa un array fisso invece di un Vec
+    mapping: [char; 26], // Uses a fixed-size array instead of a Vec
 }
 
 impl Reflector {
-	/// Crea un nuovo riflettore.
-	///
-	/// # Argomenti
-	/// * `wiring` - Una stringa di 26 caratteri che rappresenta la mappatura del riflettore.
-	///
-	/// # Errori
-	/// Restituisce un errore se la `wiring` non ha 26 caratteri.
-	pub fn new(wiring: &str) -> Result<Self, &'static str> {
-		if wiring.len() != 26 {
-			return Err("La mappatura del riflettore deve avere 26 caratteri");
-		}
+    /// Creates a new reflector with the specified wiring.
+    ///
+    /// The wiring must be a string of exactly 26 characters, where each character represents
+    /// the mapping for a corresponding letter (`A` to `Z`).
+    ///
+    /// # Arguments
+    /// * `wiring` - A string of 26 characters representing the reflector's substitution mapping.
+    ///
+    /// # Errors
+    /// Returns an error if the `wiring` string does not have exactly 26 characters.
+    ///
+    /// # Example
+    /// ```rust
+    /// let reflector = Reflector::new("EJMZALYXVBWFCRQUONTSPIKHGD")?;
+    /// println!("Reflector created: {:?}", reflector);
+    /// ```
+    pub fn new(wiring: &str) -> Result<Self, &'static str> {
+        if wiring.len() != 26 {
+            return Err("The reflector wiring must have exactly 26 characters");
+        }
 
-		let mut mapping = ['A'; 26]; // Array fisso di 26 caratteri
+        let mut mapping = ['A'; 26]; // Fixed-size array of 26 characters
 
-		for (i, c) in wiring.chars().enumerate() {
-			if let Some(index) = (c as u8).checked_sub(b'A') {
-				mapping[index as usize] = (b'A' + i as u8) as char;
-			}
-		}
+        for (i, c) in wiring.chars().enumerate() {
+            if let Some(index) = (c as u8).checked_sub(b'A') {
+                mapping[index as usize] = (b'A' + i as u8) as char;
+            }
+        }
 
-		Ok(Self { mapping })
-	}
+        Ok(Self { mapping })
+    }
 
 	/// Riflette un carattere.
 	///

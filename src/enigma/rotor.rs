@@ -1,27 +1,47 @@
+/// Represents a rotor in the Enigma machine.
+///
+/// A rotor is a key component of the Enigma machine that performs a substitution cipher
+/// on each character. It has a mapping for forward encryption, a reverse mapping for
+/// decryption, a notch position that triggers the next rotor to rotate, and a current
+/// position that determines its state.
+///
+/// # Fields
+/// - `mapping`: An array of 26 characters representing the forward substitution mapping.
+/// - `reverse_mapping`: An array of 26 characters representing the reverse substitution mapping.
+/// - `notch`: The character at which the rotor triggers the next rotor to rotate.
+/// - `position`: The current position of the rotor (0-25, corresponding to 'A'-'Z').
 #[derive(Debug)]
 pub struct Rotor {
     pub mapping: [char; 26],
     pub reverse_mapping: [char; 26],
-    pub notch: char,     // Il carattere della posizione in cui il rotore scatta
-    pub position: usize, // Posizione attuale del rotore (0-25)
+    pub notch: char, // The character at which the rotor triggers the next rotor to rotate
+    pub position: usize, // The current position of the rotor (0-25)
 }
 
 impl Rotor {
-    /// Crea un nuovo rotore.
+    /// Creates a new rotor with the specified wiring, notch, and initial position.
     ///
-    /// # Argomenti
-    /// * `wiring` - Una stringa di 26 caratteri che rappresenta la mappatura del rotore.
-    /// * `notch` - Il carattere che causa la rotazione del rotore successivo.
-    /// * `position` - La posizione iniziale del rotore.
+    /// # Arguments
+    /// * `wiring` - A string of 26 characters representing the rotor's substitution mapping.
+    /// * `notch` - The character at which the rotor triggers the next rotor to rotate.
+    /// * `position` - The initial position of the rotor (must be an ASCII uppercase letter).
     ///
-    /// # Errori
-    /// Restituisce un errore se la `wiring` non ha 26 caratteri o se `notch`/`position` non sono validi.
+    /// # Errors
+    /// Returns an error in the following cases:
+    /// - The `wiring` string does not have exactly 26 characters.
+    /// - The `notch` or `position` is not a valid ASCII uppercase letter (`A-Z`).
+    ///
+    /// # Example
+    /// ```rust
+    /// let rotor = Rotor::new("EKMFLGDQVZNTOWYHXUSPAIBRCJ", 'Q', 'A')?;
+    /// println!("Rotor created: {:?}", rotor);
+    /// ```
     pub fn new(wiring: &str, notch: char, position: char) -> Result<Self, &'static str> {
         if wiring.len() != 26 {
-            return Err("La mappatura del rotore deve avere 26 caratteri");
+            return Err("The rotor wiring must have exactly 26 characters");
         }
         if notch < 'A' || notch > 'Z' || position < 'A' || position > 'Z' {
-            return Err("Il notch e la posizione devono essere caratteri validi ('A'-'Z')");
+            return Err("The notch and position must be valid ASCII uppercase letters ('A'-'Z')");
         }
 
         let position_offset = (position as u8 - b'A') as usize;
@@ -44,45 +64,75 @@ impl Rotor {
     }
 
     ///
-    /// # Argomenti
-    /// * `c` - Il carattere da codificare.
+    /// # Arguments
+    /// * `c` - The character to encrypt (must be an ASCII uppercase letter).
     ///
-    /// # Restituisce
-    /// Il carattere codificato, o un errore se il carattere non è valido.
+    /// # Returns
+    /// - `Ok(char)`: The encrypted character.
+    /// - `Err(&'static str)`: An error if the character is not a valid ASCII uppercase letter.
+    ///
+    /// # Example
+    /// ```rust
+    /// let encrypted_char = rotor.forward('A')?;
+    /// println!("Encrypted: {}", encrypted_char);
+    /// ```
     pub fn forward(&self, c: char) -> Result<char, &'static str> {
         if !c.is_ascii_uppercase() {
-            return Err("Carattere non valido: deve essere una lettera maiuscola ASCII");
+            return Err("Invalid character: Must be an ASCII uppercase letter");
         }
         let index = (c as u8 - b'A') as usize;
         Ok(self.mapping[index])
     }
 
-    /// Codifica un carattere all'indietro (da sinistra a destra).
+    /// Encrypts a character in the reverse direction (left to right).
     ///
-    /// # Argomenti
-    /// * `c` - Il carattere da codificare.
+    /// # Arguments
+    /// * `c` - The character to encrypt (must be an ASCII uppercase letter).
     ///
-    /// # Restituisce
-    /// Il carattere codificato, o un errore se il carattere non è valido.
+    /// # Returns
+    /// - `Ok(char)`: The encrypted character.
+    /// - `Err(&'static str)`: An error if the character is not a valid ASCII uppercase letter.
+    ///
+    /// # Example
+    /// ```rust
+    /// let encrypted_char = rotor.reverse('A')?;
+    /// println!("Encrypted: {}", encrypted_char);
+    /// ```
     pub fn reverse(&self, c: char) -> Result<char, &'static str> {
         if !c.is_ascii_uppercase() {
-            return Err("Carattere non valido: deve essere una lettera maiuscola ASCII");
+            return Err("Invalid character: Must be an ASCII uppercase letter");
         }
         let index = (c as u8 - b'A') as usize;
         Ok(self.reverse_mapping[index])
     }
 
-    /// Ruota il rotore di una posizione.
+    /// Rotates the rotor by one position.
     ///
-    /// # Restituisce
-    /// `true` se il rotore è sul notch dopo la rotazione, altrimenti `false`.
+    /// # Returns
+    /// - `true`: If the rotor is on its notch position after rotation.
+    /// - `false`: Otherwise.
+    ///
+    /// # Example
+    /// ```rust
+    /// let should_rotate_next = rotor.rotate();
+    /// println!("Should rotate next rotor: {}", should_rotate_next);
+    /// ```
     pub fn rotate(&mut self) -> bool {
-        self.position = (self.position + 1) % 26; // Avanza di 1 posizione
-        self.get_current_letter() == self.notch // Ritorna true se il rotore è sul notch
+        self.position = (self.position + 1) % 26; // Advance by 1 position
+        self.get_current_letter() == self.notch // Return true if the rotor is on its notch
     }
 
-    /// Restituisce la lettera corrente del rotore.
+    /// Returns the current letter at the rotor's position.
+    ///
+    /// # Returns
+    /// The current letter (an ASCII uppercase character).
+    ///
+    /// # Example
+    /// ```rust
+    /// let current_letter = rotor.get_current_letter();
+    /// println!("Current letter: {}", current_letter);
+    /// ```
     pub fn get_current_letter(&self) -> char {
-        self.mapping[self.position] // Restituisce la lettera attuale del rotore
+        self.mapping[self.position] // Return the current letter
     }
 }
