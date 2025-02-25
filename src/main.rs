@@ -8,6 +8,7 @@ mod cli;
 /// This module defines the `EnigmaMachine` struct and its associated methods for encryption
 /// and decryption.
 mod enigma;
+mod utils;
 
 use enigma::enigma::EnigmaMachine;
 use log::info;
@@ -33,9 +34,23 @@ fn main() {
     env_logger::init();
     info!("Starting application...");
 
+    // Ensure the config file exists
+    let config_path = match utils::ensure_config_file() {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("Failed to create or access config file: {}", e);
+            return;
+        }
+    };
+
     // Load Enigma configuration from JSON
-    let mut enigma =
-        EnigmaMachine::from_config("config.json").expect("Error loading configuration!");
+    let mut enigma = match EnigmaMachine::from_config(&config_path) {
+        Ok(machine) => machine,
+        Err(e) => {
+            eprintln!("Error loading configuration: {}", e);
+            return;
+        }
+    };
 
     // Prompt the user for a message to encrypt or decrypt
     let input = cli::get_user_input("Enter the message to encrypt/decrypt: ");
