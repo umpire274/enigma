@@ -23,7 +23,6 @@ use std::fs;
 #[derive(Deserialize)]
 pub struct Config {
     n_rt: usize,
-    notches: Vec<char>,
     plugboard_pairs: Vec<(char, char)>,
     sstk: usize,
 }
@@ -71,20 +70,16 @@ impl EnigmaMachine {
         let config_str = fs::read_to_string(file_path)?;
         let config: Config = serde_json::from_str(&config_str)?;
 
-        // Validate that the number of notches matches the number of rotors
-        if config.notches.len() != config.n_rt {
-            return Err(format!(
-                "Invalid configuration: Expected {} notches, found {}",
-                config.n_rt,
-                config.notches.len()
-            ).into());
-        }
+        // Generate notches dynamically
+        let notches = Self::generate_notches(config.sstk, config.n_rt);
 
         // Validate plugboard pairs (no duplicate characters)
         let mut used_chars = std::collections::HashSet::new();
         for (a, b) in &config.plugboard_pairs {
             if !a.is_ascii_uppercase() || !b.is_ascii_uppercase() {
-                return Err("Invalid character in plugboard pairs: Must be ASCII uppercase letters".into());
+                return Err(
+                    "Invalid character in plugboard pairs: Must be ASCII uppercase letters".into(),
+                );
             }
             if used_chars.contains(a) || used_chars.contains(b) {
                 return Err("Duplicate character in plugboard pairs".into());
@@ -101,15 +96,10 @@ impl EnigmaMachine {
         }
         let reflt = Self::generate_reflector(config.n_rt);
 
-        // Check that the number of rotors and notches is the same
-        if rotors.len() != config.notches.len() {
-            return Err("The number of rotors and notches must be the same".into());
-        }
-
         let rotors = rotors
             .iter()
-            .zip(&config.notches)
-            .map(|(wiring, &notch)| Rotor::new(wiring, notch, 'A'))
+            .zip(notches)
+            .map(|(wiring, notch)| Rotor::new(wiring, notch, 'A'))
             .collect::<Result<Vec<_>, _>>()?;
 
         let reflector = Reflector::new(reflt.as_str())?;
@@ -317,5 +307,28 @@ impl EnigmaMachine {
         }
 
         reflector.into_iter().collect()
+    }
+
+    /// Generates a random set of notches for the rotors.
+    ///
+    /// # Arguments
+    /// * `sstk` - A seed value used for random generation.
+    /// * `n_rt` - The number of rotors (and thus the number of notches to generate).
+    ///
+    /// # Returns
+    /// A `Vec<char>` containing the notches, one for each rotor.
+    pub fn generate_notches(sstk: usize, n_rt: usize) -> Vec<char> {
+        let dmy = chrono::Local::now();
+        let p1 = dmy.day() as u64;
+        let p2 = dmy.month() as u64;
+        let p3 = dmy.year() as u64;
+        let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + utils::FIXED_HASH;
+
+        let mut rng = StdRng::seed_from_u64(seed);
+        let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
+        alphabet.shuffle(&mut rng);
+
+        // Select the first `n_rt` characters as notches
+        alphabet.into_iter().take(n_rt).collect()
     }
 }
