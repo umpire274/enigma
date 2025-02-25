@@ -71,6 +71,28 @@ impl EnigmaMachine {
         let config_str = fs::read_to_string(file_path)?;
         let config: Config = serde_json::from_str(&config_str)?;
 
+        // Validate that the number of notches matches the number of rotors
+        if config.notches.len() != config.n_rt {
+            return Err(format!(
+                "Invalid configuration: Expected {} notches, found {}",
+                config.n_rt,
+                config.notches.len()
+            ).into());
+        }
+
+        // Validate plugboard pairs (no duplicate characters)
+        let mut used_chars = std::collections::HashSet::new();
+        for (a, b) in &config.plugboard_pairs {
+            if !a.is_ascii_uppercase() || !b.is_ascii_uppercase() {
+                return Err("Invalid character in plugboard pairs: Must be ASCII uppercase letters".into());
+            }
+            if used_chars.contains(a) || used_chars.contains(b) {
+                return Err("Duplicate character in plugboard pairs".into());
+            }
+            used_chars.insert(*a);
+            used_chars.insert(*b);
+        }
+
         let mut rotors: Vec<String> = Vec::new();
         for idx_rotor in 1..=config.n_rt {
             let rotor = Self::generate_rotor(config.sstk, idx_rotor);
