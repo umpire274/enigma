@@ -1,4 +1,5 @@
 use super::{plugboard::Plugboard, reflector::Reflector, rotor::Rotor};
+use crate::utils;
 use chrono::prelude::*;
 use log::debug;
 use rand::rngs::StdRng;
@@ -259,7 +260,8 @@ impl EnigmaMachine {
         let p1 = dmy.day() as u64;
         let p2 = dmy.month() as u64;
         let p3 = dmy.year() as u64;
-        let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + rotor_index as u64;
+        let seed =
+            (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + rotor_index as u64 + utils::FIXED_HASH;
         let mut rng = StdRng::seed_from_u64(seed);
         let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
         alphabet.shuffle(&mut rng);
@@ -280,7 +282,7 @@ impl EnigmaMachine {
         let p1 = dmy.day() as u64;
         let p2 = dmy.month() as u64;
         let p3 = dmy.year() as u64;
-        let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3;
+        let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + utils::FIXED_HASH;
         let mut rng = StdRng::seed_from_u64(seed);
 
         let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();

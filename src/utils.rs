@@ -4,6 +4,8 @@ use std::io::{self, Write};
 use std::env;
 use serde_json;
 
+pub static FIXED_HASH: u64 = 1737;
+
 /// Checks if the configuration file exists. If not, creates the necessary directory and file.
 ///
 /// # Returns
