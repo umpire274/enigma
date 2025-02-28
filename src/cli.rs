@@ -2,27 +2,20 @@ use std::io::{self, Write};
 
 /// Prompts the user for input and returns the entered text in uppercase.
 ///
-/// This function displays a prompt to the user, reads their input from the standard input,
-/// trims any leading or trailing whitespace, and converts the input to uppercase.
-///
 /// # Arguments
 /// * `prompt` - The message displayed to the user as a prompt.
 ///
 /// # Returns
 /// The user's input as a `String` in uppercase.
-///
-/// # Example
-/// ```rust
-/// let user_input = get_user_input("Enter a message: ");
-/// println!("You entered: {}", user_input);
-/// ```
 pub fn get_user_input(prompt: &str) -> String {
-    print!("{}", prompt); // Display the prompt
-    io::stdout().flush().unwrap(); // Ensure the prompt is displayed immediately
+    print!("{}", prompt);
+    io::stdout().flush().unwrap(); // Assicura che il prompt venga stampato immediatamente
 
     let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap(); // Read the user's input
-    input.trim().to_uppercase() // Trim whitespace and convert to uppercase
+    io::stdin().read_line(&mut input).unwrap(); // Legge l'input dell'utente
+
+    // Rimuove spazi, newline e carriage return all'inizio e alla fine
+    input.trim().to_string()
 }
 
 /// Displays the result of an encryption operation.

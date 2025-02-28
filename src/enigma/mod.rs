@@ -1,3 +1,4 @@
+pub mod utils;
 /// Module containing the implementation of the rotors for the Enigma machine.
 ///
 /// Rotors are the core components of the Enigma machine that perform the substitution cipher.

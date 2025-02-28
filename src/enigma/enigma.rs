@@ -92,9 +92,10 @@ impl EnigmaMachine {
         for idx_rotor in 1..=config.n_rt {
             let rotor = Self::generate_rotor(config.sstk, idx_rotor);
             rotors.push(rotor);
-            debug!("rotor nr.{}: {}", idx_rotor, rotors[idx_rotor - 1]);
+            debug!("rotor nr.{}:\t{}", idx_rotor, rotors[idx_rotor - 1]);
         }
         let reflt = Self::generate_reflector(config.n_rt);
+        debug!("reflector:\t{}", reflt);
 
         let rotors = rotors
             .iter()
@@ -103,6 +104,7 @@ impl EnigmaMachine {
             .collect::<Result<Vec<_>, _>>()?;
 
         let reflector = Reflector::new(reflt.as_str())?;
+        debug!("plugboard:\t{:?}", config.plugboard_pairs);
         let plugboard = Plugboard::new(config.plugboard_pairs)?;
 
         Ok(Self {
