@@ -6,6 +6,7 @@ use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, SeedableRng};
 use serde::Deserialize;
 use std::fs;
+use crate::cli::postprocess_output;
 
 /// Represents the configuration for initializing an Enigma machine.
 ///
@@ -233,7 +234,8 @@ impl EnigmaMachine {
         }
 
         if is_cyphred {
-            Ok(self.format_continuous(&result))
+            let output=postprocess_output(&result);
+            Ok(self.format_continuous(output.as_str()))
         } else {
             Ok(self.format_dashed(&result))
         }

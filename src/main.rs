@@ -9,11 +9,12 @@ mod cli;
 /// and decryption.
 mod enigma;
 
+use crate::cli::{postprocess_output, preprocess_input};
 use base64::engine::general_purpose::STANDARD as base64_engine;
 use base64::Engine;
 use enigma::enigma::EnigmaMachine;
 use enigma::utils;
-use log::info;
+use log::{debug, info};
 
 /// Main entry point of the program.
 ///
@@ -69,14 +70,18 @@ fn main() {
     // Process the message based on the operation
     let result = match operation.as_str() {
         "e" => {
+            let input = preprocess_input(input.trim());
+            debug!("preprocessed input: {:?}", input);
+
             // Encrypt the message with Enigma
-            let enigma_encrypted = match enigma.encrypt_message(&input.trim().to_uppercase()) {
+            let enigma_encrypted = match enigma.encrypt_message(&input.to_uppercase()) {
                 Ok(text) => text,
                 Err(e) => {
                     eprintln!("Error encrypting with Enigma: {}", e);
                     return;
                 }
             };
+            debug!("Enigma encrypted: {:?}", &enigma_encrypted);
 
             // Encrypt the Enigma output with AES
             let aes_encrypted = match utils::encrypt_aes(&enigma_encrypted, key, iv) {
@@ -86,10 +91,12 @@ fn main() {
                     return;
                 }
             };
+            debug!("AES encrypted: {:?}", &aes_encrypted);
 
             let aes_encrypted_base64 = base64_engine.encode(&aes_encrypted);
+            debug!("AES encrypted base64: {:?}", &aes_encrypted_base64);
 
-            Ok(aes_encrypted_base64)
+            Ok(postprocess_output(&aes_encrypted_base64))
         }
         "d" => {
             let encrypted_message = input.trim().to_string();
@@ -101,6 +108,7 @@ fn main() {
                     return;
                 }
             };
+            debug!("AES encrypted message: {:?}", &aes_encrypted);
 
             let aes_decrypted = match utils::decrypt_aes(&aes_encrypted, key, iv) {
                 Ok(decrypted) => decrypted,
@@ -109,6 +117,11 @@ fn main() {
                     return;
                 }
             };
+            debug!("AES decrypted: {:?}", &aes_decrypted);
+            debug!(
+                "Enigma text: {:?}",
+                &String::from_utf8_lossy(&aes_decrypted)
+            );
 
             // Decrypt the Enigma message
             enigma.encrypt_message(&String::from_utf8_lossy(&aes_decrypted))
@@ -120,7 +133,14 @@ fn main() {
     };
 
     // Display the result to the user
-    cli::display_output(&result);
+    let output = match result {
+        Ok(output) => output,
+        Err(e) => {
+            eprintln!("Error output string: {}", e);
+            return;
+        }
+    };
+    cli::display_output(&output);
 
     info!("Application ended.");
 }

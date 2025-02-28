@@ -34,9 +34,50 @@ pub fn get_user_input(prompt: &str) -> String {
 /// let error = Err("Invalid character");
 /// display_output(&error); // Prints: "Error: Invalid character"
 /// ```
-pub fn display_output(encrypted_text: &Result<String, &str>) {
-    match encrypted_text {
-        Ok(text) => println!("Encrypted text: {}", text), // Print the encrypted text
-        Err(err) => println!("Error: {}", err),           // Print the error message
+pub fn display_output(encrypted_text: &str) {
+    println!("Encrypted text: {}", encrypted_text);
+}
+
+pub fn preprocess_input(input: &str) -> String {
+    input
+        .chars()
+        .map(|c| {
+            if c.is_ascii_digit() {
+                // Converti i numeri in sequenze con prefisso 'X'
+                let num = c.to_digit(10).unwrap() as u8;
+                let letter = (b'Z' - num) as char; // Usa la formula per trovare la lettera
+                format!("X{}", letter)
+            } else {
+                // Mantieni le lettere originali (convertite in maiuscolo)
+                c.to_ascii_uppercase().to_string()
+            }
+        })
+        .collect()
+}
+
+pub fn postprocess_output(output: &str) -> String {
+    let mut result = String::new();
+    let mut chars = output.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == 'X' {
+            // Se troviamo un 'X', la prossima lettera rappresenta un numero
+            if let Some(next_c) = chars.next() {
+                if next_c >= 'R' && next_c <= 'Z' {
+                    // Usa la formula per trovare il numero
+                    let num = (b'Z' - next_c as u8).to_string();
+                    result.push_str(&num);
+                } else {
+                    // Se non è una lettera valida, mantieni i caratteri originali
+                    result.push('X');
+                    result.push(next_c);
+                }
+            }
+        } else {
+            // Mantieni le lettere originali
+            result.push(c);
+        }
     }
+
+    result
 }
