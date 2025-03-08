@@ -5,6 +5,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
+use chrono::Local;
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -112,4 +113,13 @@ pub fn decrypt_aes(encrypted_message: &[u8], key: &[u8], iv: &[u8]) -> Result<Ve
     decrypted.truncate(count + rest);
 
     Ok(decrypted)
+}
+
+pub fn collect_pre_message(plugboard_pairs: &[(char, char)]) -> String {
+    let date = Local::now().format("%Y%m%d").to_string(); // Data in formato AAAAMMGG
+    let plugboard_chars: String = plugboard_pairs
+        .iter()
+        .flat_map(|(a, b)| vec![*a, *b])
+        .collect(); // Esempio: "ABCD" per le coppie [('A', 'B'), ('C', 'D')]
+    format!("{}|{}", date, plugboard_chars) // Formato: DATA-MESSAGGIO-PLUG
 }
