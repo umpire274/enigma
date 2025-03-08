@@ -10,6 +10,7 @@ mod cli;
 mod enigma;
 
 use crate::cli::{postprocess_output, preprocess_input};
+use crate::enigma::utils::collect_pre_message;
 use base64::engine::general_purpose::STANDARD as base64_engine;
 use base64::Engine;
 use enigma::enigma::EnigmaMachine;
@@ -70,6 +71,25 @@ fn main() {
     // Process the message based on the operation
     let result = match operation.as_str() {
         "e" => {
+            let pre_message = collect_pre_message(&*enigma.vec_plug);
+            // Encrypt the Enigma output with AES
+            let aes_encrypted_pre_message = match utils::encrypt_aes(&pre_message, key, iv) {
+                Ok(encrypted) => encrypted,
+                Err(e) => {
+                    eprintln!("Error encrypting with AES: {}", e);
+                    return;
+                }
+            };
+            debug!(
+                "AES encrypted pre-message: {:?}",
+                &aes_encrypted_pre_message
+            );
+            let aes_encrypted_base64_pre_message = base64_engine.encode(&aes_encrypted_pre_message);
+            debug!(
+                "AES encrypted base64 pre-message: {:?}",
+                &aes_encrypted_base64_pre_message
+            );
+
             let input = preprocess_input(input.trim());
             debug!("preprocessed input: {:?}", input);
 
@@ -83,8 +103,11 @@ fn main() {
             };
             debug!("Enigma encrypted: {:?}", &enigma_encrypted);
 
+            let message = aes_encrypted_base64_pre_message.to_string() + "|" + &enigma_encrypted;
+            debug!("Enigma message: {:?}", &message);
+
             // Encrypt the Enigma output with AES
-            let aes_encrypted = match utils::encrypt_aes(&enigma_encrypted, key, iv) {
+            let aes_encrypted = match utils::encrypt_aes(&message, key, iv) {
                 Ok(encrypted) => encrypted,
                 Err(e) => {
                     eprintln!("Error encrypting with AES: {}", e);
@@ -118,13 +141,24 @@ fn main() {
                 }
             };
             debug!("AES decrypted: {:?}", &aes_decrypted);
+
             debug!(
                 "Enigma text: {:?}",
                 &String::from_utf8_lossy(&aes_decrypted)
             );
 
+            let message = String::from_utf8_lossy(&aes_decrypted);
+            // Splitta la stringa utilizzando "|" come separatore
+            let parts: Vec<&str> = message.split('|').collect();
+
+            let pre_message = parts[0]; // Prima parte: "cMhAKbYccysBwGJU1TLGLskBK0xBC52C3YPe5IE="
+            let enigma_message = parts[1]; // Seconda parte: "VOBB-ETOI-IJDO"
+
+            debug!("pre_message: {}", pre_message);
+            debug!("enigma message: {}", enigma_message);
+
             // Decrypt the Enigma message
-            enigma.encrypt_message(&String::from_utf8_lossy(&aes_decrypted))
+            enigma.encrypt_message(enigma_message)
         }
         _ => {
             eprintln!("Invalid input. Please enter 'e' for encrypt or 'd' for decrypt.");

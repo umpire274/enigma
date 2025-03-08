@@ -39,10 +39,12 @@ pub struct Config {
 /// - `rotors`: A vector of `Rotor` instances, each representing a rotor in the machine.
 /// - `reflector`: A `Reflector` instance representing the reflector in the machine.
 /// - `plugboard`: A `Plugboard` instance representing the plugboard in the machine.
+/// - `vec_plug` : A plugboard_pairs vec stored in clear.
 pub struct EnigmaMachine {
     rotors: Vec<Rotor>,
     reflector: Reflector,
     plugboard: Plugboard,
+    pub vec_plug: Vec<(char, char)>,
 }
 
 impl EnigmaMachine {
@@ -106,12 +108,14 @@ impl EnigmaMachine {
 
         let reflector = Reflector::new(reflt.as_str())?;
         debug!("plugboard:\t{:?}", config.plugboard_pairs);
+        let vec_plug = config.plugboard_pairs.clone();
         let plugboard = Plugboard::new(config.plugboard_pairs)?;
 
         Ok(Self {
             rotors,
             reflector,
             plugboard,
+            vec_plug,
         })
     }
 
