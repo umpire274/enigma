@@ -1,21 +1,18 @@
 /// Module for handling command-line interface (CLI) interactions.
-///
-/// This module provides functions for getting user input and displaying output.
 mod cli;
 
 /// Module containing the implementation of the Enigma machine.
-///
-/// This module defines the `EnigmaMachine` struct and its associated methods for encryption
-/// and decryption.
 mod enigma;
 
 use crate::cli::{postprocess_output, preprocess_input};
 use crate::enigma::utils::collect_pre_message;
 use base64::engine::general_purpose::STANDARD as base64_engine;
 use base64::Engine;
+use chrono::prelude::*;
 use enigma::enigma::EnigmaMachine;
 use enigma::utils;
 use log::{debug, info};
+use std::fs;
 
 /// Main entry point of the program.
 ///
@@ -50,10 +47,19 @@ fn main() {
     };
 
     // Load Enigma configuration from JSON
-    let mut enigma = match EnigmaMachine::from_config(&config_path) {
-        Ok(machine) => machine,
+    let config_str = match fs::read_to_string(&config_path) {
+        Ok(content) => content,
         Err(e) => {
-            eprintln!("Error loading configuration: {}", e);
+            eprintln!("Failed to read config file: {}", e);
+            return;
+        }
+    };
+
+    // Parse the JSON configuration
+    let config: utils::Config = match serde_json::from_str(&config_str) {
+        Ok(config) => config,
+        Err(e) => {
+            eprintln!("Failed to parse config file: {}", e);
             return;
         }
     };
@@ -69,8 +75,22 @@ fn main() {
     let iv = &utils::IV[..]; // 16-byte IV for AES-256-CBC
 
     // Process the message based on the operation
-    let result = match operation.as_str() {
+    let result: Result<String, &'static str> = match operation.as_str() {
         "e" => {
+            // Create the Enigma machine using the configuration from the JSON file
+            let mut enigma = match EnigmaMachine::new_from_params(
+                config.sstk,                                // Seed from JSON
+                config.n_rt,                                // Number of rotors from JSON
+                &Local::now().format("%Y%m%d").to_string(), // Today's date
+                config.plugboard_pairs,                     // Plugboard pairs from JSON
+            ) {
+                Ok(machine) => machine,
+                Err(e) => {
+                    eprintln!("Error creating Enigma machine: {}", e);
+                    return;
+                }
+            };
+
             let pre_message = collect_pre_message(&*enigma.vec_plug);
             // Encrypt the Enigma output with AES
             let aes_encrypted_pre_message = match utils::encrypt_aes(&pre_message, key, iv) {
@@ -157,6 +177,58 @@ fn main() {
             debug!("pre_message: {}", pre_message);
             debug!("enigma message: {}", enigma_message);
 
+            let aes_pre_decrypted_base64 = match base64_engine.decode(&pre_message) {
+                Ok(data) => data,
+                Err(e) => {
+                    eprintln!("Error decoding base64 message: {}", e);
+                    return;
+                }
+            };
+            debug!(
+                "AES Base64 decrypted pre-message: {:?}",
+                &aes_pre_decrypted_base64
+            );
+
+            let aes_pre_decrypted = match utils::decrypt_aes(&aes_pre_decrypted_base64, key, iv) {
+                Ok(decrypted) => decrypted,
+                Err(e) => {
+                    eprintln!("Error decrypting with AES: {}", e);
+                    return;
+                }
+            };
+            debug!(
+                "AES decrypted pre-message: {:?}",
+                &String::from_utf8_lossy(&aes_pre_decrypted)
+            );
+            let premessage = format!("{}", &String::from_utf8_lossy(&aes_pre_decrypted));
+
+            let premex: Vec<&str> = premessage.split('|').collect();
+            let data = premex[0];
+            let pairs = premex[1];
+
+            // Step 1: Split the string into pairs of characters
+            let plugboard_pairs: Vec<(char, char)> = pairs
+                .chars() // Convert the string into an iterator of characters
+                .collect::<Vec<char>>() // Collect the characters into a Vec<char>
+                .chunks(2) // Split the Vec<char> into chunks of 2 characters
+                .map(|chunk| (chunk[0], chunk[1])) // Convert each chunk into a tuple (char, char)
+                .collect(); // Collect all tuples into a Vec<(char, char)>
+
+            // Create the Enigma machine using the configuration from the JSON file
+            let mut enigma = match EnigmaMachine::new_from_params(
+                config.sstk,                                // Seed from JSON
+                config.n_rt,                                // Number of rotors from JSON
+                data, // Today's date
+                plugboard_pairs,                     // Plugboard pairs from JSON
+            ) {
+                Ok(machine) => machine,
+                Err(e) => {
+                    eprintln!("Error creating Enigma machine: {}", e);
+                    return;
+                }
+            };
+
+            //Ok("Hello".to_string())
             // Decrypt the Enigma message
             enigma.encrypt_message(enigma_message)
         }
