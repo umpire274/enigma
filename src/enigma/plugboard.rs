@@ -1,12 +1,8 @@
+use rand::rngs::StdRng;
+use rand::{seq::SliceRandom, SeedableRng};
 use std::collections::HashMap;
 
 /// Represents a plugboard in the Enigma machine.
-///
-/// The plugboard is a component that swaps pairs of letters before and after they pass through
-/// the rotors. It enhances the security of the encryption by adding an extra layer of substitution.
-///
-/// # Fields
-/// - `mapping`: A `HashMap` that stores the character swaps. Each key-value pair represents a swap.
 #[derive(Debug)]
 pub struct Plugboard {
     mapping: HashMap<char, char>,
@@ -15,37 +11,48 @@ pub struct Plugboard {
 impl Plugboard {
     /// Creates a new plugboard with the specified character pairs.
     ///
-    /// The plugboard swaps each pair of characters provided in the `pairs` vector. Each character
-    /// must be a valid ASCII uppercase letter (`A-Z`), and no character can be mapped more than once.
+    /// If `seed` is provided, the plugboard pairs are generated randomly based on the seed.
+    /// Otherwise, the provided `pairs` are used.
     ///
     /// # Arguments
     /// * `pairs` - A vector of character pairs to swap. Each pair is represented as a tuple `(char, char)`.
+    ///             If `seed` is provided, this parameter is ignored.
+    /// * `seed` - An optional seed for generating random plugboard pairs.
     ///
     /// # Errors
     /// Returns an error in the following cases:
     /// - Any character in the pairs is not a valid ASCII uppercase letter.
     /// - A character is mapped more than once (duplicate mapping).
-    ///
-    /// # Example
-    /// ```rust
-    /// let plugboard = Plugboard::new(vec![('A', 'B'), ('C', 'D')])?;
-    /// println!("Plugboard created: {:?}", plugboard);
-    /// ```
-    pub fn new(pairs: Vec<(char, char)>) -> Result<Self, &'static str> {
+    pub fn new(pairs: Option<Vec<(char, char)>>, seed: Option<u64>) -> Result<Self, &'static str> {
+        let pairs = match seed {
+            Some(seed) => {
+                // Generate random plugboard pairs
+                let mut rng = StdRng::seed_from_u64(seed);
+                let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
+                alphabet.shuffle(&mut rng);
+
+                let mut pairs = Vec::new();
+                for i in (0..26).step_by(2) {
+                    if i + 1 < 26 {
+                        pairs.push((alphabet[i], alphabet[i + 1]));
+                    }
+                }
+                pairs
+            }
+            None => {
+                if let Some(pairs) = pairs {
+                    pairs
+                } else {
+                    return Err("Either pairs or seed must be provided");
+                }
+            }
+        };
+
+        // Validate plugboard pairs
+        Self::validate_plugboard_pairs(&pairs)?;
+
         let mut mapping = HashMap::new();
-
         for (a, b) in pairs {
-            // Verify that the characters are valid
-            if !a.is_ascii_uppercase() || !b.is_ascii_uppercase() {
-                return Err("Invalid characters: Must be ASCII uppercase letters");
-            }
-
-            // Verify that there are no duplicate mappings
-            if mapping.contains_key(&a) || mapping.contains_key(&b) {
-                return Err("Duplicate mapping: A character cannot be mapped more than once");
-            }
-
-            // Insert the mappings
             mapping.insert(a, b);
             mapping.insert(b, a);
         }
@@ -54,26 +61,28 @@ impl Plugboard {
     }
 
     /// Swaps a character based on the plugboard's mapping.
-    ///
-    /// If the character has a mapping in the plugboard, it is swapped with its corresponding pair.
-    /// If no mapping exists, the character is returned unchanged.
-    ///
-    /// # Arguments
-    /// * `c` - The character to swap (must be an ASCII uppercase letter).
-    ///
-    /// # Returns
-    /// - `Ok(char)`: The swapped character.
-    /// - `Err(&'static str)`: An error if the character is not a valid ASCII uppercase letter.
-    ///
-    /// # Example
-    /// ```rust
-    /// let swapped_char = plugboard.swap('A')?;
-    /// println!("Swapped: {}", swapped_char); // Output: 'B' if 'A' is mapped to 'B'
-    /// ```
     pub fn swap(&self, c: char) -> Result<char, &'static str> {
         if !c.is_ascii_uppercase() {
             return Err("Invalid character: Must be an ASCII uppercase letter");
         }
         Ok(*self.mapping.get(&c).unwrap_or(&c))
+    }
+
+    /// Validates the plugboard pairs.
+    pub fn validate_plugboard_pairs(pairs: &[(char, char)]) -> Result<(), &'static str> {
+        let mut used_chars = std::collections::HashSet::new();
+        for (a, b) in pairs {
+            if !a.is_ascii_uppercase() || !b.is_ascii_uppercase() {
+                return Err(
+                    "Invalid character in plugboard pairs: Must be ASCII uppercase letters",
+                );
+            }
+            if used_chars.contains(a) || used_chars.contains(b) {
+                return Err("Duplicate character in plugboard pairs");
+            }
+            used_chars.insert(*a);
+            used_chars.insert(*b);
+        }
+        Ok(())
     }
 }

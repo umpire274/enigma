@@ -1,40 +1,55 @@
+use rand::rngs::StdRng;
+use rand::{seq::SliceRandom, SeedableRng};
+
 /// Represents a reflector in the Enigma machine.
-///
-/// A reflector is a fixed component of the Enigma machine that redirects the electrical signal
-/// back through the rotors after they have performed their substitutions. It ensures that the
-/// encryption process is reversible by mapping each character to another character in a fixed way.
-///
-/// # Fields
-/// - `mapping`: A fixed-size array of 26 characters representing the reflector's substitution mapping.
 #[derive(Debug)]
 pub struct Reflector {
-    mapping: [char; 26], // Uses a fixed-size array instead of a Vec
+    mapping: [char; 26],
 }
 
 impl Reflector {
     /// Creates a new reflector with the specified wiring.
     ///
-    /// The wiring must be a string of exactly 26 characters, where each character represents
-    /// the mapping for a corresponding letter (`A` to `Z`).
+    /// If `seed` is provided, the wiring is generated randomly based on the seed.
+    /// Otherwise, the provided `wiring` is used.
     ///
     /// # Arguments
     /// * `wiring` - A string of 26 characters representing the reflector's substitution mapping.
+    ///              If `seed` is provided, this parameter is ignored.
+    /// * `seed` - An optional seed for generating random wiring.
     ///
     /// # Errors
-    /// Returns an error if the `wiring` string does not have exactly 26 characters.
-    ///
-    /// # Example
-    /// ```rust
-    /// let reflector = Reflector::new("EJMZALYXVBWFCRQUONTSPIKHGD")?;
-    /// println!("Reflector created: {:?}", reflector);
-    /// ```
-    pub fn new(wiring: &str) -> Result<Self, &'static str> {
-        if wiring.len() != 26 {
-            return Err("The reflector wiring must have exactly 26 characters");
-        }
+    /// Returns an error if the `wiring` string does not have exactly 26 characters (if `seed` is `None`).
+    pub fn new(wiring: Option<&str>, seed: Option<u64>) -> Result<Self, &'static str> {
+        let wiring = match seed {
+            Some(seed) => {
+                // Generate random reflector wiring
+                let mut rng = StdRng::seed_from_u64(seed);
+                let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
+                alphabet.shuffle(&mut rng);
 
-        let mut mapping = ['A'; 26]; // Fixed-size array of 26 characters
+                let mut reflector = vec![' '; 26];
+                for i in (0..26).step_by(2) {
+                    if i + 1 < 26 {
+                        reflector[alphabet[i] as usize - 'A' as usize] = alphabet[i + 1];
+                        reflector[alphabet[i + 1] as usize - 'A' as usize] = alphabet[i];
+                    }
+                }
+                reflector.into_iter().collect()
+            }
+            None => {
+                if let Some(wiring) = wiring {
+                    if wiring.len() != 26 {
+                        return Err("The reflector wiring must have exactly 26 characters");
+                    }
+                    wiring.to_string()
+                } else {
+                    return Err("Either wiring or seed must be provided");
+                }
+            }
+        };
 
+        let mut mapping = ['A'; 26];
         for (i, c) in wiring.chars().enumerate() {
             if let Some(index) = (c as u8).checked_sub(b'A') {
                 mapping[index as usize] = (b'A' + i as u8) as char;
@@ -45,22 +60,6 @@ impl Reflector {
     }
 
     /// Reflects a character using the reflector's mapping.
-    ///
-    /// This method takes a character and returns the corresponding character based on the
-    /// reflector's substitution mapping. The input character must be an ASCII uppercase letter.
-    ///
-    /// # Arguments
-    /// * `c` - The character to reflect (must be an ASCII uppercase letter).
-    ///
-    /// # Returns
-    /// - `Ok(char)`: The reflected character.
-    /// - `Err(&'static str)`: An error if the character is not a valid ASCII uppercase letter.
-    ///
-    /// # Example
-    /// ```rust
-    /// let reflected_char = reflector.reflect('A')?;
-    /// println!("Reflected: {}", reflected_char);
-    /// ```
     pub fn reflect(&self, c: char) -> Result<char, &'static str> {
         if !c.is_ascii_uppercase() {
             return Err("Invalid character: Must be an ASCII uppercase letter");

@@ -1,5 +1,6 @@
 use openssl::error::ErrorStack;
 use openssl::symm::{Cipher, Mode, Crypter};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use std::env;
 use std::fs;
@@ -16,6 +17,14 @@ lazy_static! {
 }
 
 pub static FIXED_HASH: u64 = 1737;
+
+/// Represents the configuration for initializing an Enigma machine.
+#[derive(Serialize, Deserialize)]
+pub struct Config {
+    pub n_rt: usize,                     // Number of rotors
+    pub plugboard_pairs: Vec<(char, char)>, // Plugboard pairs
+    pub sstk: usize,                     // Seed for random generation
+}
 
 /// Checks if the configuration file exists. If not, creates the necessary directory and file.
 ///

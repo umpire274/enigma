@@ -1,15 +1,7 @@
+use rand::rngs::StdRng;
+use rand::{seq::SliceRandom, SeedableRng};
+
 /// Represents a rotor in the Enigma machine.
-///
-/// A rotor is a key component of the Enigma machine that performs a substitution cipher
-/// on each character. It has a mapping for forward encryption, a reverse mapping for
-/// decryption, a notch position that triggers the next rotor to rotate, and a current
-/// position that determines its state.
-///
-/// # Fields
-/// - `mapping`: An array of 26 characters representing the forward substitution mapping.
-/// - `reverse_mapping`: An array of 26 characters representing the reverse substitution mapping.
-/// - `notch`: The character at which the rotor triggers the next rotor to rotate.
-/// - `position`: The current position of the rotor (0-25, corresponding to 'A'-'Z').
 #[derive(Debug)]
 pub struct Rotor {
     pub mapping: [char; 26],
@@ -21,30 +13,51 @@ pub struct Rotor {
 impl Rotor {
     /// Creates a new rotor with the specified wiring, notch, and initial position.
     ///
+    /// If `seed` is provided, the wiring is generated randomly based on the seed.
+    /// Otherwise, the provided `wiring` is used.
+    ///
     /// # Arguments
     /// * `wiring` - A string of 26 characters representing the rotor's substitution mapping.
+    ///              If `seed` is provided, this parameter is ignored.
     /// * `notch` - The character at which the rotor triggers the next rotor to rotate.
     /// * `position` - The initial position of the rotor (must be an ASCII uppercase letter).
+    /// * `seed` - An optional seed for generating random wiring.
     ///
     /// # Errors
     /// Returns an error in the following cases:
-    /// - The `wiring` string does not have exactly 26 characters.
-    /// - The `notch` or `position` is not a valid ASCII uppercase letter (`A-Z`).
-    ///
-    /// # Example
-    /// ```rust
-    /// let rotor = Rotor::new("EKMFLGDQVZNTOWYHXUSPAIBRCJ", 'Q', 'A')?;
-    /// println!("Rotor created: {:?}", rotor);
-    /// ```
-    pub fn new(wiring: &str, notch: char, position: char) -> Result<Self, &'static str> {
-        if wiring.len() != 26 {
-            return Err("The rotor wiring must have exactly 26 characters");
-        }
+    /// - The `wiring` string does not have exactly 26 characters (if `seed` is `None`).
+    /// - The `notch` or `position` is not a valid ASCII uppercase letter (`A'-'Z'`).
+    pub fn new(
+        wiring: Option<&str>,
+        notch: char,
+        position: char,
+        seed: Option<u64>,
+    ) -> Result<Self, &'static str> {
         if notch < 'A' || notch > 'Z' || position < 'A' || position > 'Z' {
             return Err("The notch and position must be valid ASCII uppercase letters ('A'-'Z')");
         }
 
         let position_offset = (position as u8 - b'A') as usize;
+
+        // Generate wiring if a seed is provided
+        let wiring = match seed {
+            Some(seed) => {
+                let mut rng = StdRng::seed_from_u64(seed);
+                let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
+                alphabet.shuffle(&mut rng);
+                alphabet.into_iter().collect()
+            }
+            None => {
+                if let Some(wiring) = wiring {
+                    if wiring.len() != 26 {
+                        return Err("The rotor wiring must have exactly 26 characters");
+                    }
+                    wiring.to_string()
+                } else {
+                    return Err("Either wiring or seed must be provided");
+                }
+            }
+        };
 
         let mapping: [char; 26] = wiring.chars().collect::<Vec<char>>().try_into().unwrap();
         let mut reverse_mapping = ['A'; 26];

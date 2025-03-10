@@ -1,149 +1,83 @@
-use super::{plugboard::Plugboard, reflector::Reflector, rotor::Rotor};
+// src/enigma/enigma.rs
+use super::plugboard::Plugboard;
+use super::reflector::Reflector;
+use super::rotor::Rotor;
+use crate::cli::postprocess_output;
 use crate::utils;
 use chrono::prelude::*;
 use log::debug;
 use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, SeedableRng};
 use serde::Deserialize;
-use std::fs;
-use crate::cli::postprocess_output;
 
 /// Represents the configuration for initializing an Enigma machine.
-///
-/// This struct is used to deserialize the configuration from a file (e.g., JSON)
-/// and contains all the necessary components to set up the machine:
-/// - Number of rotors and their notches.
-/// - Plugboard pairings.
-/// - A seed value for generating random rotors and reflectors.
-///
-/// # Fields
-/// - `n_rt`: The number of rotors to generate.
-/// - `notches`: A vector of characters, where each character represents the notch position of a rotor.
-/// - `plugboard_pairs`: A vector of character pairs representing the plugboard connections.
-/// - `sstk`: A seed value used for random generation of rotors and reflectors.
 #[derive(Deserialize)]
 pub struct Config {
-    n_rt: usize,
-    plugboard_pairs: Vec<(char, char)>,
-    sstk: usize,
+    n_rt: usize,                        // Number of rotors
+    plugboard_pairs: Vec<(char, char)>, // Plugboard pairs
+    sstk: usize,                        // Seed for random generation
 }
 
 /// Represents an Enigma machine with its core components.
-///
-/// This struct encapsulates the state of the Enigma machine, including:
-/// - The rotors, which perform the substitution cipher.
-/// - The reflector, which redirects the electrical signal back through the rotors.
-/// - The plugboard, which swaps pairs of letters before and after the rotors.
-///
-/// # Fields
-/// - `rotors`: A vector of `Rotor` instances, each representing a rotor in the machine.
-/// - `reflector`: A `Reflector` instance representing the reflector in the machine.
-/// - `plugboard`: A `Plugboard` instance representing the plugboard in the machine.
-/// - `vec_plug` : A plugboard_pairs vec stored in clear.
 pub struct EnigmaMachine {
-    rotors: Vec<Rotor>,
-    reflector: Reflector,
-    plugboard: Plugboard,
-    pub vec_plug: Vec<(char, char)>,
+    rotors: Vec<Rotor>,              // List of rotors
+    reflector: Reflector,            // Reflector
+    plugboard: Plugboard,            // Plugboard
+    pub vec_plug: Vec<(char, char)>, // Plugboard pairs in clear
 }
 
 impl EnigmaMachine {
-    /// Initializes a new Enigma machine from a configuration file.
-    ///
-    /// This function reads a JSON configuration file containing the settings for the Enigma machine,
-    /// including the number of rotors, notch positions, plugboard pairings, and a seed for random generation.
-    /// It then constructs and returns an `EnigmaMachine` instance based on the provided configuration.
+    /// Creates a new Enigma machine from the provided parameters.
     ///
     /// # Arguments
-    /// * `file_path` - The path to the JSON configuration file.
+    /// * `sstk` - Seed for random generation of rotors and reflector.
+    /// * `n_rt` - Number of rotors.
+    /// * `date` - Date in the format `%Y%m%d` (used for generating components).
+    /// * `plugboard_pairs` - List of character pairs for the plugboard.
     ///
-    /// # Errors
-    /// Returns an error in the following cases:
-    /// - The file cannot be read (e.g., invalid path or permissions).
-    /// - The file content is not valid JSON or does not match the expected structure.
-    /// - The number of rotors and notches does not match.
-    /// - Any of the components (rotors, reflector, plugboard) fail to initialize due to invalid configurations.
-    ///
-    /// # Example
-    /// ```rust
-    /// let enigma = EnigmaMachine::from_config("config.json")?;
-    /// println!("Enigma machine initialized successfully!");
-    /// ```
-    pub fn from_config(file_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let config_str = fs::read_to_string(file_path)?;
-        let config: Config = serde_json::from_str(&config_str)?;
+    /// # Returns
+    /// - `Ok(Self)`: The Enigma machine instance.
+    /// - `Err(&'static str)`: An error if any component fails to initialize.
+    pub fn new_from_params(
+        sstk: usize,
+        n_rt: usize,
+        date: &str,
+        plugboard_pairs: Vec<(char, char)>,
+    ) -> Result<Self, &'static str> {
+        // Validate plugboard pairs using the function from plugboard.rs
+        Plugboard::validate_plugboard_pairs(&plugboard_pairs)?;
 
-        // Generate notches dynamically
-        let notches = Self::generate_notches(config.sstk, config.n_rt);
+        // Generate rotors
+        debug!("Generating rotors...");
+        let rotors = create_rotors(n_rt, sstk, date)?;
+        debug!("Rotors generated successfully.");
 
-        // Validate plugboard pairs (no duplicate characters)
-        let mut used_chars = std::collections::HashSet::new();
-        for (a, b) in &config.plugboard_pairs {
-            if !a.is_ascii_uppercase() || !b.is_ascii_uppercase() {
-                return Err(
-                    "Invalid character in plugboard pairs: Must be ASCII uppercase letters".into(),
-                );
-            }
-            if used_chars.contains(a) || used_chars.contains(b) {
-                return Err("Duplicate character in plugboard pairs".into());
-            }
-            used_chars.insert(*a);
-            used_chars.insert(*b);
-        }
+        // Generate reflector
+        debug!("Generating reflector...");
+        let reflector = create_reflector(sstk, date)?;
+        debug!("Reflector generated successfully.");
 
-        let mut rotors: Vec<String> = Vec::new();
-        for idx_rotor in 1..=config.n_rt {
-            let rotor = Self::generate_rotor(config.sstk, idx_rotor);
-            rotors.push(rotor);
-            debug!("rotor nr.{}:\t{}", idx_rotor, rotors[idx_rotor - 1]);
-        }
-        let reflt = Self::generate_reflector(config.n_rt);
-        debug!("reflector:\t{}", reflt);
-
-        let rotors = rotors
-            .iter()
-            .zip(notches)
-            .map(|(wiring, notch)| Rotor::new(wiring, notch, 'A'))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let reflector = Reflector::new(reflt.as_str())?;
-        debug!("plugboard:\t{:?}", config.plugboard_pairs);
-        let vec_plug = config.plugboard_pairs.clone();
-        let plugboard = Plugboard::new(config.plugboard_pairs)?;
+        // Create plugboard
+        debug!("Creating plugboard...");
+        let plugboard = create_plugboard(sstk, date)?;
+        debug!("Plugboard created successfully.");
 
         Ok(Self {
             rotors,
             reflector,
             plugboard,
-            vec_plug,
+            vec_plug: plugboard_pairs,
         })
     }
 
     /// Encrypts a message using the Enigma machine's current configuration.
     ///
-    /// This function processes each character of the input message through the Enigma machine's components:
-    /// 1. The plugboard swaps the character (if a mapping exists).
-    /// 2. The rotors perform a forward substitution.
-    /// 3. The reflector redirects the signal back through the rotors.
-    /// 4. The rotors perform a reverse substitution.
-    /// 5. The plugboard swaps the character again (if a mapping exists).
-    ///
     /// # Arguments
-    /// * `message` - The message to encrypt. It must consist of ASCII uppercase letters (`A-Z`).
+    /// * `message` - The message to encrypt (must consist of ASCII uppercase letters).
     ///
     /// # Returns
-    /// - `Ok(String)`: The encrypted message, where each character is transformed according to the Enigma machine's configuration.
-    /// - `Err(&'static str)`: An error message if the input contains invalid characters (non-ASCII uppercase letters).
-    ///
-    /// # Errors
-    /// Returns an error if the message contains any character that is not an ASCII uppercase letter.
-    ///
-    /// # Example
-    /// ```rust
-    /// let enigma = EnigmaMachine::from_config("config.json")?;
-    /// let encrypted = enigma.encrypt("HELLO")?;
-    /// println!("Encrypted: {}", encrypted); // Output: "RFKTZ"
-    /// ```
+    /// - `Ok(String)`: The encrypted message.
+    /// - `Err(&'static str)`: An error if the input contains invalid characters.
     pub fn encrypt(&self, message: &str) -> Result<String, &'static str> {
         message
             .chars()
@@ -165,19 +99,6 @@ impl EnigmaMachine {
     }
 
     /// Formats a given text by grouping uppercase ASCII characters into chunks of 4, separated by dashes.
-    ///
-    /// # Arguments
-    /// * `text` - The input text to be formatted.
-    ///
-    /// # Returns
-    /// A `String` where uppercase ASCII characters are grouped into quartets (4 characters each),
-    /// separated by dashes (`-`). Non-uppercase characters and spaces are filtered out.
-    ///
-    /// # Example
-    /// ```rust
-    /// let formatted = format_dashed("HELLO WORLD");
-    /// assert_eq!(formatted, "HELL-OWOR-LD");
-    /// ```
     fn format_dashed(&self, text: &str) -> String {
         text.chars()
             .filter(|c| c.is_ascii_uppercase())
@@ -189,40 +110,11 @@ impl EnigmaMachine {
     }
 
     /// Removes dashes from the input text and joins all characters into a continuous string.
-    ///
-    /// # Arguments
-    /// * `text` - The input text formatted with dashes.
-    ///
-    /// # Returns
-    /// A `String` where all characters are joined together without any dashes.
-    ///
-    /// # Example
-    /// ```rust
-    /// let continuous = format_continuous("HELL-OWOR-LD");
-    /// assert_eq!(continuous, "HELLOWORLD");
-    /// ```
     pub fn format_continuous(&self, text: &str) -> String {
         text.chars().filter(|c| *c != '-').collect::<String>()
     }
 
     /// Encrypts a message and formats the output based on the presence of dashes.
-    ///
-    /// This function processes the input message, encrypts it using the Enigma machine, and formats
-    /// the output either as a continuous string (if dashes are present) or as dashed quartets (if no dashes are present).
-    ///
-    /// # Arguments
-    /// * `text` - The message to be encrypted.
-    ///
-    /// # Returns
-    /// - `Ok(String)`: The encrypted message, formatted as specified.
-    /// - `Err(&'static str)`: An error message if the input contains invalid characters.
-    ///
-    /// # Example
-    /// ```rust
-    /// let mut enigma = EnigmaMachine::from_config("config.json").unwrap();
-    /// let encrypted = enigma.encrypt_message("HELLO WORLD").unwrap();
-    /// println!("Encrypted: {}", encrypted); // Output: "SOME-ENCR-YPTE-DTEX-T"
-    /// ```
     pub fn encrypt_message(&mut self, text: &str) -> Result<String, &'static str> {
         let mut result = String::new();
         let mut is_cyphred = false;
@@ -238,7 +130,7 @@ impl EnigmaMachine {
         }
 
         if is_cyphred {
-            let output=postprocess_output(&result);
+            let output = postprocess_output(&result);
             Ok(self.format_continuous(output.as_str()))
         } else {
             Ok(self.format_dashed(&result))
@@ -246,14 +138,6 @@ impl EnigmaMachine {
     }
 
     /// Rotates the rotors based on their current positions and notches.
-    ///
-    /// This function advances the rotors in a way that mimics the behavior of the Enigma machine:
-    /// - The first rotor always rotates.
-    /// - Each subsequent rotor rotates if the previous rotor has reached its notch position.
-    ///
-    /// # Behavior
-    /// - The rotation starts from the first rotor and propagates to the next rotor only if the current rotor's notch is engaged.
-    /// - If a rotor does not need to rotate (i.e., its notch is not engaged), the rotation process stops.
     fn step_rotors(&mut self) {
         let mut rotate_next = true;
         for i in 0..self.rotors.len() {
@@ -265,71 +149,12 @@ impl EnigmaMachine {
         }
     }
 
-    /// Generates a random rotor wiring based on a seed and rotor index.
-    ///
-    /// This function uses the current date and a seed value to generate a unique wiring for each rotor.
-    ///
-    /// # Arguments
-    /// * `sstk` - A seed value used for random generation.
-    /// * `rotor_index` - The index of the rotor (used to ensure unique wiring for each rotor).
-    ///
-    /// # Returns
-    /// A `String` representing the wiring of the rotor.
-    fn generate_rotor(sstk: usize, rotor_index: usize) -> String {
-        let dmy = Local::now();
-        let p1 = dmy.day() as u64;
-        let p2 = dmy.month() as u64;
-        let p3 = dmy.year() as u64;
-        let seed =
-            (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + rotor_index as u64 + utils::FIXED_HASH;
-        let mut rng = StdRng::seed_from_u64(seed);
-        let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
-        alphabet.shuffle(&mut rng);
-        alphabet.into_iter().collect()
-    }
-
-    /// Generates a random reflector wiring based on a seed.
-    ///
-    /// This function uses the current date and a seed value to generate a unique wiring for the reflector.
-    ///
-    /// # Arguments
-    /// * `sstk` - A seed value used for random generation.
-    ///
-    /// # Returns
-    /// A `String` representing the wiring of the reflector.
-    fn generate_reflector(sstk: usize) -> String {
-        let dmy = Local::now();
-        let p1 = dmy.day() as u64;
-        let p2 = dmy.month() as u64;
-        let p3 = dmy.year() as u64;
-        let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + utils::FIXED_HASH;
-        let mut rng = StdRng::seed_from_u64(seed);
-
-        let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
-        alphabet.shuffle(&mut rng);
-
-        let mut reflector = vec![' '; 26];
-        for i in (0..26).step_by(2) {
-            reflector[alphabet[i] as usize - 'A' as usize] = alphabet[i + 1];
-            reflector[alphabet[i + 1] as usize - 'A' as usize] = alphabet[i];
-        }
-
-        reflector.into_iter().collect()
-    }
-
     /// Generates a random set of notches for the rotors.
-    ///
-    /// # Arguments
-    /// * `sstk` - A seed value used for random generation.
-    /// * `n_rt` - The number of rotors (and thus the number of notches to generate).
-    ///
-    /// # Returns
-    /// A `Vec<char>` containing the notches, one for each rotor.
-    pub fn generate_notches(sstk: usize, n_rt: usize) -> Vec<char> {
-        let dmy = chrono::Local::now();
-        let p1 = dmy.day() as u64;
-        let p2 = dmy.month() as u64;
-        let p3 = dmy.year() as u64;
+    fn generate_notches(sstk: usize, n_rt: usize, date: &str) -> Vec<char> {
+        let date = chrono::NaiveDate::parse_from_str(date, "%Y%m%d").unwrap();
+        let p1 = date.day() as u64;
+        let p2 = date.month() as u64;
+        let p3 = date.year() as u64;
         let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + utils::FIXED_HASH;
 
         let mut rng = StdRng::seed_from_u64(seed);
@@ -339,4 +164,45 @@ impl EnigmaMachine {
         // Select the first `n_rt` characters as notches
         alphabet.into_iter().take(n_rt).collect()
     }
+}
+
+/// Creates the rotors for the Enigma machine.
+fn create_rotors(n_rt: usize, sstk: usize, date: &str) -> Result<Vec<Rotor>, &'static str> {
+    let notches = EnigmaMachine::generate_notches(sstk, n_rt, date);
+    let mut rotors = Vec::new();
+
+    for idx_rotor in 1..=n_rt {
+        let date = NaiveDate::parse_from_str(date, "%Y%m%d").unwrap();
+        let p1 = date.day() as u64;
+        let p2 = date.month() as u64;
+        let p3 = date.year() as u64;
+        let seed =
+            (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + idx_rotor as u64 + utils::FIXED_HASH;
+
+        // Create a new rotor with random wiring
+        let rotor = Rotor::new(None, notches[idx_rotor - 1], 'A', Some(seed))?;
+        rotors.push(rotor);
+    }
+
+    Ok(rotors)
+}
+
+fn create_plugboard(sstk: usize, date: &str) -> Result<Plugboard, &'static str> {
+    let date = NaiveDate::parse_from_str(date, "%Y%m%d").unwrap();
+    let p1 = date.day() as u64;
+    let p2 = date.month() as u64;
+    let p3 = date.year() as u64;
+    let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + utils::FIXED_HASH;
+
+    Plugboard::new(None, Some(seed))
+}
+
+fn create_reflector(sstk: usize, date: &str) -> Result<Reflector, &'static str> {
+    let date = NaiveDate::parse_from_str(date, "%Y%m%d").unwrap();
+    let p1 = date.day() as u64;
+    let p2 = date.month() as u64;
+    let p3 = date.year() as u64;
+    let seed = (p1 * sstk as u64) + (p2 * sstk as u64) + p3 + utils::FIXED_HASH;
+
+    Reflector::new(None, Some(seed))
 }
