@@ -8,15 +8,6 @@ use chrono::prelude::*;
 use log::debug;
 use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, SeedableRng};
-use serde::Deserialize;
-
-/// Represents the configuration for initializing an Enigma machine.
-#[derive(Deserialize)]
-pub struct Config {
-    n_rt: usize,                        // Number of rotors
-    plugboard_pairs: Vec<(char, char)>, // Plugboard pairs
-    sstk: usize,                        // Seed for random generation
-}
 
 /// Represents an Enigma machine with its core components.
 pub struct EnigmaMachine {
@@ -151,7 +142,7 @@ impl EnigmaMachine {
 
     /// Generates a random set of notches for the rotors.
     fn generate_notches(sstk: usize, n_rt: usize, date: &str) -> Vec<char> {
-        let date = chrono::NaiveDate::parse_from_str(date, "%Y%m%d").unwrap();
+        let date = NaiveDate::parse_from_str(date, "%Y%m%d").unwrap();
         let p1 = date.day() as u64;
         let p2 = date.month() as u64;
         let p3 = date.year() as u64;

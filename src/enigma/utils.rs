@@ -26,6 +26,25 @@ pub struct Config {
     pub sstk: usize,                     // Seed for random generation
 }
 
+/// Loads the Enigma machine configuration from the config file.
+///
+/// # Returns
+/// - `Ok(Config)`: The configuration loaded from the file.
+/// - `Err(io::Error)`: An error if the file cannot be read or parsed.
+pub fn load_config() -> io::Result<Config> {
+    // Ensure the config file exists
+    let config_path = ensure_config_file()?;
+
+    // Read the config file
+    let config_str = fs::read_to_string(&config_path)?;
+
+    // Parse the JSON configuration
+    let config: Config = serde_json::from_str(&config_str)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+
+    Ok(config)
+}
+
 /// Checks if the configuration file exists. If not, creates the necessary directory and file.
 ///
 /// # Returns

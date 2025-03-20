@@ -4,15 +4,14 @@ mod cli;
 /// Module containing the implementation of the Enigma machine.
 mod enigma;
 
-use crate::cli::{postprocess_output, preprocess_input};
-use crate::enigma::utils::collect_pre_message;
+use crate::cli::preprocess_input;
+use crate::enigma::utils::{collect_pre_message};
 use base64::engine::general_purpose::STANDARD as base64_engine;
 use base64::Engine;
 use chrono::prelude::*;
 use enigma::enigma::EnigmaMachine;
 use enigma::utils;
 use log::{debug, info};
-use std::fs;
 
 /// Main entry point of the program.
 ///
@@ -37,29 +36,11 @@ fn main() {
     env_logger::init();
     info!("Starting application...");
 
-    // Ensure the config file exists
-    let config_path = match utils::ensure_config_file() {
-        Ok(path) => path,
-        Err(e) => {
-            eprintln!("Failed to create or access config file: {}", e);
-            return;
-        }
-    };
-
-    // Load Enigma configuration from JSON
-    let config_str = match fs::read_to_string(&config_path) {
-        Ok(content) => content,
-        Err(e) => {
-            eprintln!("Failed to read config file: {}", e);
-            return;
-        }
-    };
-
-    // Parse the JSON configuration
-    let config: utils::Config = match serde_json::from_str(&config_str) {
+    // Load Enigma configuration
+    let config = match utils::load_config() {
         Ok(config) => config,
         Err(e) => {
-            eprintln!("Failed to parse config file: {}", e);
+            eprintln!("Failed to load configuration: {}", e);
             return;
         }
     };
@@ -139,7 +120,7 @@ fn main() {
             let aes_encrypted_base64 = base64_engine.encode(&aes_encrypted);
             debug!("AES encrypted base64: {:?}", &aes_encrypted_base64);
 
-            Ok(postprocess_output(&aes_encrypted_base64))
+            Ok(aes_encrypted_base64)
         }
         "d" => {
             let encrypted_message = input.trim().to_string();
@@ -228,8 +209,6 @@ fn main() {
                 }
             };
 
-            //Ok("Hello".to_string())
-            // Decrypt the Enigma message
             enigma.encrypt_message(enigma_message)
         }
         _ => {
