@@ -1,4 +1,3 @@
-// src/enigma/enigma.rs
 use super::plugboard::Plugboard;
 use super::reflector::Reflector;
 use super::rotor::Rotor;
@@ -11,10 +10,17 @@ use rand::{seq::SliceRandom, SeedableRng};
 
 /// Represents an Enigma machine with its core components.
 pub struct EnigmaMachine {
-    rotors: Vec<Rotor>,              // List of rotors
-    reflector: Reflector,            // Reflector
-    plugboard: Plugboard,            // Plugboard
-    pub vec_plug: Vec<(char, char)>, // Plugboard pairs in clear
+    /// List of rotors used in the Enigma machine.
+    rotors: Vec<Rotor>,
+
+    /// Reflector used to redirect the signal back through the rotors.
+    reflector: Reflector,
+
+    /// Plugboard used to swap pairs of letters before and after encryption.
+    plugboard: Plugboard,
+
+    /// Plugboard pairs in clear text, stored for reference.
+    pub vec_plug: Vec<(char, char)>,
 }
 
 impl EnigmaMachine {
@@ -29,6 +35,11 @@ impl EnigmaMachine {
     /// # Returns
     /// - `Ok(Self)`: The Enigma machine instance.
     /// - `Err(&'static str)`: An error if any component fails to initialize.
+    ///
+    /// # Example
+    /// ```rust
+    /// let enigma = EnigmaMachine::new_from_params(12345, 3, "20231001", vec![('A', 'B'), ('C', 'D')])?;
+    /// ```
     pub fn new_from_params(
         sstk: usize,
         n_rt: usize,
@@ -69,6 +80,12 @@ impl EnigmaMachine {
     /// # Returns
     /// - `Ok(String)`: The encrypted message.
     /// - `Err(&'static str)`: An error if the input contains invalid characters.
+    ///
+    /// # Example
+    /// ```rust
+    /// let encrypted = enigma.encrypt("HELLO")?;
+    /// println!("Encrypted message: {}", encrypted);
+    /// ```
     pub fn encrypt(&self, message: &str) -> Result<String, &'static str> {
         message
             .chars()
@@ -90,6 +107,18 @@ impl EnigmaMachine {
     }
 
     /// Formats a given text by grouping uppercase ASCII characters into chunks of 4, separated by dashes.
+    ///
+    /// # Arguments
+    /// * `text` - The text to format.
+    ///
+    /// # Returns
+    /// A string with characters grouped into chunks of 4, separated by dashes.
+    ///
+    /// # Example
+    /// ```rust
+    /// let formatted = enigma.format_dashed("ABCDEFGH");
+    /// assert_eq!(formatted, "ABCD-EFGH");
+    /// ```
     fn format_dashed(&self, text: &str) -> String {
         text.chars()
             .filter(|c| c.is_ascii_uppercase())
@@ -101,11 +130,36 @@ impl EnigmaMachine {
     }
 
     /// Removes dashes from the input text and joins all characters into a continuous string.
+    ///
+    /// # Arguments
+    /// * `text` - The text to format.
+    ///
+    /// # Returns
+    /// A continuous string with all dashes removed.
+    ///
+    /// # Example
+    /// ```rust
+    /// let formatted = enigma.format_continuous("ABCD-EFGH");
+    /// assert_eq!(formatted, "ABCDEFGH");
+    /// ```
     pub fn format_continuous(&self, text: &str) -> String {
         text.chars().filter(|c| *c != '-').collect::<String>()
     }
 
     /// Encrypts a message and formats the output based on the presence of dashes.
+    ///
+    /// # Arguments
+    /// * `text` - The message to encrypt.
+    ///
+    /// # Returns
+    /// - `Ok(String)`: The encrypted and formatted message.
+    /// - `Err(&'static str)`: An error if the input contains invalid characters.
+    ///
+    /// # Example
+    /// ```rust
+    /// let encrypted = enigma.encrypt_message("HELLO")?;
+    /// println!("Encrypted message: {}", encrypted);
+    /// ```
     pub fn encrypt_message(&mut self, text: &str) -> Result<String, &'static str> {
         let mut result = String::new();
         let mut is_cyphred = false;
@@ -141,6 +195,14 @@ impl EnigmaMachine {
     }
 
     /// Generates a random set of notches for the rotors.
+    ///
+    /// # Arguments
+    /// * `sstk` - Seed for random generation.
+    /// * `n_rt` - Number of rotors.
+    /// * `date` - Date in the format `%Y%m%d` (used for generating components).
+    ///
+    /// # Returns
+    /// A vector of characters representing the notches.
     fn generate_notches(sstk: usize, n_rt: usize, date: &str) -> Vec<char> {
         let date = NaiveDate::parse_from_str(date, "%Y%m%d").unwrap();
         let p1 = date.day() as u64;
@@ -158,6 +220,15 @@ impl EnigmaMachine {
 }
 
 /// Creates the rotors for the Enigma machine.
+///
+/// # Arguments
+/// * `n_rt` - Number of rotors.
+/// * `sstk` - Seed for random generation.
+/// * `date` - Date in the format `%Y%m%d` (used for generating components).
+///
+/// # Returns
+/// - `Ok(Vec<Rotor>)`: A vector of rotors.
+/// - `Err(&'static str)`: An error if any rotor fails to initialize.
 fn create_rotors(n_rt: usize, sstk: usize, date: &str) -> Result<Vec<Rotor>, &'static str> {
     let notches = EnigmaMachine::generate_notches(sstk, n_rt, date);
     let mut rotors = Vec::new();
@@ -178,6 +249,15 @@ fn create_rotors(n_rt: usize, sstk: usize, date: &str) -> Result<Vec<Rotor>, &'s
     Ok(rotors)
 }
 
+/// Creates the plugboard for the Enigma machine.
+///
+/// # Arguments
+/// * `sstk` - Seed for random generation.
+/// * `date` - Date in the format `%Y%m%d` (used for generating components).
+///
+/// # Returns
+/// - `Ok(Plugboard)`: The plugboard instance.
+/// - `Err(&'static str)`: An error if the plugboard fails to initialize.
 fn create_plugboard(sstk: usize, date: &str) -> Result<Plugboard, &'static str> {
     let date = NaiveDate::parse_from_str(date, "%Y%m%d").unwrap();
     let p1 = date.day() as u64;
@@ -188,6 +268,15 @@ fn create_plugboard(sstk: usize, date: &str) -> Result<Plugboard, &'static str> 
     Plugboard::new(None, Some(seed))
 }
 
+/// Creates the reflector for the Enigma machine.
+///
+/// # Arguments
+/// * `sstk` - Seed for random generation.
+/// * `date` - Date in the format `%Y%m%d` (used for generating components).
+///
+/// # Returns
+/// - `Ok(Reflector)`: The reflector instance.
+/// - `Err(&'static str)`: An error if the reflector fails to initialize.
 fn create_reflector(sstk: usize, date: &str) -> Result<Reflector, &'static str> {
     let date = NaiveDate::parse_from_str(date, "%Y%m%d").unwrap();
     let p1 = date.day() as u64;

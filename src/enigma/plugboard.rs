@@ -3,8 +3,12 @@ use rand::{seq::SliceRandom, SeedableRng};
 use std::collections::HashMap;
 
 /// Represents a plugboard in the Enigma machine.
+///
+/// The plugboard swaps pairs of letters before and after they pass through the rotors,
+/// adding an extra layer of substitution to the encryption process.
 #[derive(Debug)]
 pub struct Plugboard {
+    /// A mapping of characters to their swapped counterparts.
     mapping: HashMap<char, char>,
 }
 
@@ -19,10 +23,14 @@ impl Plugboard {
     ///             If `seed` is provided, this parameter is ignored.
     /// * `seed` - An optional seed for generating random plugboard pairs.
     ///
-    /// # Errors
-    /// Returns an error in the following cases:
-    /// - Any character in the pairs is not a valid ASCII uppercase letter.
-    /// - A character is mapped more than once (duplicate mapping).
+    /// # Returns
+    /// - `Ok(Self)`: The plugboard instance.
+    /// - `Err(&'static str)`: An error if the pairs contain invalid characters or duplicate mappings.
+    ///
+    /// # Example
+    /// ```rust
+    /// let plugboard = Plugboard::new(Some(vec![('A', 'B'), ('C', 'D')]), None)?;
+    /// ```
     pub fn new(pairs: Option<Vec<(char, char)>>, seed: Option<u64>) -> Result<Self, &'static str> {
         let pairs = match seed {
             Some(seed) => {
@@ -61,6 +69,19 @@ impl Plugboard {
     }
 
     /// Swaps a character based on the plugboard's mapping.
+    ///
+    /// # Arguments
+    /// * `c` - The character to swap (must be an ASCII uppercase letter).
+    ///
+    /// # Returns
+    /// - `Ok(char)`: The swapped character.
+    /// - `Err(&'static str)`: An error if the character is not a valid ASCII uppercase letter.
+    ///
+    /// # Example
+    /// ```rust
+    /// let swapped_char = plugboard.swap('A')?;
+    /// println!("Swapped: {}", swapped_char);
+    /// ```
     pub fn swap(&self, c: char) -> Result<char, &'static str> {
         if !c.is_ascii_uppercase() {
             return Err("Invalid character: Must be an ASCII uppercase letter");
@@ -69,6 +90,18 @@ impl Plugboard {
     }
 
     /// Validates the plugboard pairs.
+    ///
+    /// # Arguments
+    /// * `pairs` - A slice of character pairs to validate.
+    ///
+    /// # Returns
+    /// - `Ok(())`: If all pairs are valid.
+    /// - `Err(&'static str)`: An error if any pair contains invalid characters or duplicate mappings.
+    ///
+    /// # Example
+    /// ```rust
+    /// Plugboard::validate_plugboard_pairs(&[('A', 'B'), ('C', 'D')])?;
+    /// ```
     pub fn validate_plugboard_pairs(pairs: &[(char, char)]) -> Result<(), &'static str> {
         let mut used_chars = std::collections::HashSet::new();
         for (a, b) in pairs {

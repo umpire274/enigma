@@ -2,8 +2,12 @@ use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, SeedableRng};
 
 /// Represents a reflector in the Enigma machine.
+///
+/// A reflector is a fixed component that redirects the electrical signal back through the rotors
+/// after they have performed their substitutions. It ensures that the encryption process is reversible.
 #[derive(Debug)]
 pub struct Reflector {
+    /// The mapping of characters for reflection.
     mapping: [char; 26],
 }
 
@@ -18,8 +22,14 @@ impl Reflector {
     ///              If `seed` is provided, this parameter is ignored.
     /// * `seed` - An optional seed for generating random wiring.
     ///
-    /// # Errors
-    /// Returns an error if the `wiring` string does not have exactly 26 characters (if `seed` is `None`).
+    /// # Returns
+    /// - `Ok(Self)`: The reflector instance.
+    /// - `Err(&'static str)`: An error if the wiring string does not have exactly 26 characters (if `seed` is `None`).
+    ///
+    /// # Example
+    /// ```rust
+    /// let reflector = Reflector::new(Some("EJMZALYXVBWFCRQUONTSPIKHGD"), None)?;
+    /// ```
     pub fn new(wiring: Option<&str>, seed: Option<u64>) -> Result<Self, &'static str> {
         let wiring = match seed {
             Some(seed) => {
@@ -60,6 +70,19 @@ impl Reflector {
     }
 
     /// Reflects a character using the reflector's mapping.
+    ///
+    /// # Arguments
+    /// * `c` - The character to reflect (must be an ASCII uppercase letter).
+    ///
+    /// # Returns
+    /// - `Ok(char)`: The reflected character.
+    /// - `Err(&'static str)`: An error if the character is not a valid ASCII uppercase letter.
+    ///
+    /// # Example
+    /// ```rust
+    /// let reflected_char = reflector.reflect('A')?;
+    /// println!("Reflected: {}", reflected_char);
+    /// ```
     pub fn reflect(&self, c: char) -> Result<char, &'static str> {
         if !c.is_ascii_uppercase() {
             return Err("Invalid character: Must be an ASCII uppercase letter");

@@ -2,12 +2,23 @@ use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, SeedableRng};
 
 /// Represents a rotor in the Enigma machine.
+///
+/// A rotor is a core component of the Enigma machine that performs a substitution cipher.
+/// It has a mapping of characters for encryption in the forward and reverse directions,
+/// a notch that triggers the next rotor to rotate, and a current position.
 #[derive(Debug)]
 pub struct Rotor {
+    /// The mapping of characters for encryption in the forward direction.
     pub mapping: [char; 26],
+
+    /// The mapping of characters for encryption in the reverse direction.
     pub reverse_mapping: [char; 26],
-    pub notch: char, // The character at which the rotor triggers the next rotor to rotate
-    pub position: usize, // The current position of the rotor (0-25)
+
+    /// The character at which the rotor triggers the next rotor to rotate.
+    pub notch: char,
+
+    /// The current position of the rotor (0-25).
+    pub position: usize,
 }
 
 impl Rotor {
@@ -23,10 +34,14 @@ impl Rotor {
     /// * `position` - The initial position of the rotor (must be an ASCII uppercase letter).
     /// * `seed` - An optional seed for generating random wiring.
     ///
-    /// # Errors
-    /// Returns an error in the following cases:
-    /// - The `wiring` string does not have exactly 26 characters (if `seed` is `None`).
-    /// - The `notch` or `position` is not a valid ASCII uppercase letter (`A'-'Z'`).
+    /// # Returns
+    /// - `Ok(Self)`: The rotor instance.
+    /// - `Err(&'static str)`: An error if the wiring, notch, or position is invalid.
+    ///
+    /// # Example
+    /// ```rust
+    /// let rotor = Rotor::new(Some("EKMFLGDQVZNTOWYHXUSPAIBRCJ"), 'Q', 'A', None)?;
+    /// ```
     pub fn new(
         wiring: Option<&str>,
         notch: char,
