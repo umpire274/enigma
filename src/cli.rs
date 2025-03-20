@@ -1,6 +1,5 @@
 use base64::engine::general_purpose::STANDARD as base64_engine;
 use base64::Engine;
-use log::debug;
 use std::io::{self, Write};
 use crate::enigma::enigma::EnigmaMachine;
 use crate::enigma::utils;
