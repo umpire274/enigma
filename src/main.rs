@@ -1,18 +1,14 @@
-/// Module for handling command-line interface (CLI) interactions.
+// src/main.rs
+
 mod cli;
-
-/// Module containing the implementation of the Enigma machine.
 mod enigma;
+mod crypto;
 
-use crate::cli::{decrypt_message, display_output, encrypt_message, get_user_input};
+use crate::cli::{display_output, get_user_input};
+use crate::crypto::{decrypt_message, encrypt_message};
 use crate::enigma::utils;
 use log::info;
 
-/// Main entry point of the program.
-///
-/// This program simulates the Enigma machine, allowing users to encrypt and decrypt messages.
-/// It loads the Enigma configuration from a JSON file, prompts the user for a message,
-/// processes the message using the Enigma machine (and AES if necessary), and displays the result.
 fn main() {
     env_logger::init();
     info!("Starting application...");
