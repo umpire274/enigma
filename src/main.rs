@@ -4,6 +4,7 @@ mod cli;
 mod enigma;
 mod crypto;
 
+use std::io;
 use crate::cli::{display_output, get_user_input};
 use crate::crypto::{decrypt_message, encrypt_message};
 use crate::enigma::utils;
@@ -44,7 +45,7 @@ fn main() {
 
     // Display the result to the user
     match result {
-        Ok(output) => display_output(&output),
+        Ok(output) => display_output(&output, io::stdout()),
         Err(e) => eprintln!("Error: {}", e),
     }
 
