@@ -177,6 +177,11 @@ pub fn encrypt_aes(message: &str, key: &[u8], iv: &[u8]) -> Result<Vec<u8>, Erro
 /// println!("Decrypted message: {:?}", decrypted);
 /// ```
 pub fn decrypt_aes(encrypted_message: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+    // Verifica che la lunghezza dei dati sia valida
+    if encrypted_message.len() < 16 {
+        return Err(ErrorStack::get()); // Restituisci un errore se i dati sono troppo corti
+    }
+
     let cipher = Cipher::aes_256_gcm();
 
     // Separate the encrypted data and the tag

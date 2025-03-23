@@ -46,6 +46,11 @@ impl EnigmaMachine {
         date: &str,
         plugboard_pairs: Vec<(char, char)>,
     ) -> Result<Self, &'static str> {
+        // Verifica che il numero di rotori sia valido
+        if n_rt < 1 || n_rt > 5 {
+            return Err("Invalid number of rotors. Expected a value between 1 and 5.");
+        }
+
         // Validate plugboard pairs using the function from plugboard.rs
         Plugboard::validate_plugboard_pairs(&plugboard_pairs)?;
 
