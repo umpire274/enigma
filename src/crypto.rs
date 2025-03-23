@@ -121,3 +121,126 @@ pub fn decrypt_message(
         Err(e) => Err(format!("Error decrypting with Enigma: {}", e)),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::enigma::utils::Config;
+
+    // Configurazione di esempio per i test
+    fn get_test_config() -> Config {
+        Config {
+            sstk: 12345,                                   // Seed di esempio
+            n_rt: 3,                                       // Numero di rotori di esempio
+            plugboard_pairs: vec![('A', 'B'), ('C', 'D')], // Coppie di plugboard di esempio
+        }
+    }
+
+    // Chiave e IV di esempio per AES
+    const TEST_KEY: &[u8] = b"0123456789abcdef0123456789abcdef"; // 32 byte per AES-256
+    const TEST_IV: &[u8] = b"1234567890abcdef"; // 16 byte per AES-256-CBC
+
+    #[test]
+    fn test_encrypt_message_success() {
+        let config = get_test_config();
+        let input = "Hello, World!";
+
+        let result = encrypt_message(input, &config, TEST_KEY, TEST_IV);
+
+        assert!(result.is_ok(), "Encryption should succeed");
+        let encrypted = result.unwrap();
+        assert!(
+            !encrypted.is_empty(),
+            "Encrypted message should not be empty"
+        );
+    }
+
+    #[test]
+    fn test_encrypt_message_invalid_enigma() {
+        let mut config = get_test_config();
+        config.n_rt = 0; // Numero di rotori non valido
+
+        let input = "Hello, World!";
+
+        let result = encrypt_message(input, &config, TEST_KEY, TEST_IV);
+
+        assert!(
+            result.is_err(),
+            "Encryption should fail due to invalid Enigma configuration"
+        );
+        assert!(result
+            .unwrap_err()
+            .contains("Error creating Enigma machine"));
+    }
+
+    #[test]
+    fn test_decrypt_message_success() {
+        let config = get_test_config();
+        let input = "Hello, World!";
+        let expected_output = "HELLOWORLD";
+
+        // Cifra il messaggio prima di decifrarlo
+        let encrypted = encrypt_message(input, &config, TEST_KEY, TEST_IV).unwrap();
+        let result = decrypt_message(&encrypted, &config, TEST_KEY, TEST_IV);
+
+        assert!(result.is_ok(), "Decryption should succeed");
+        let decrypted = result.unwrap();
+        assert_eq!(
+            decrypted, expected_output,
+            "Decrypted message should match the original input"
+        );
+    }
+
+    #[test]
+    fn test_decrypt_message_invalid_base64() {
+        let config = get_test_config();
+        let invalid_base64 = "InvalidBase64!!"; // Input non valido per Base64
+
+        let result = decrypt_message(invalid_base64, &config, TEST_KEY, TEST_IV);
+
+        assert!(
+            result.is_err(),
+            "Decryption should fail due to invalid Base64 input"
+        );
+        assert!(result
+            .unwrap_err()
+            .contains("Error decoding base64 message"));
+    }
+
+    #[test]
+    fn test_decrypt_message_invalid_aes() {
+        let config = get_test_config();
+        let invalid_aes = base64_engine.encode(b"InvalidAESData"); // Dati AES non validi
+
+        let result = decrypt_message(&invalid_aes, &config, TEST_KEY, TEST_IV);
+
+        assert!(
+            result.is_err(),
+            "Decryption should fail due to invalid AES data"
+        );
+        assert!(result.unwrap_err().to_string().contains("error")); // Verifica che ci sia un errore
+    }
+
+    #[test]
+    fn test_decrypt_message_invalid_enigma() {
+        let config = get_test_config();
+        let input = "Hello, World!";
+
+        // Cifra il messaggio prima di decifrarlo
+        let encrypted = encrypt_message(input, &config, TEST_KEY, TEST_IV).unwrap();
+
+        // Modifica la configurazione per causare un errore nella creazione di Enigma
+        let mut invalid_config = config;
+        invalid_config.n_rt = 0; // Numero di rotori non valido
+
+        let result = decrypt_message(&encrypted, &invalid_config, TEST_KEY, TEST_IV);
+
+        assert!(
+            result.is_err(),
+            "Decryption should fail due to invalid Enigma configuration"
+        );
+        assert!(result
+            .unwrap_err()
+            .contains("Error creating Enigma machine"));
+    }
+}
