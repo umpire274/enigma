@@ -147,8 +147,10 @@ impl Rotor {
     /// println!("Should rotate next rotor: {}", should_rotate_next);
     /// ```
     pub fn rotate(&mut self) -> bool {
-        self.position = (self.position + 1) % 26; // Advance by 1 position
-        self.get_current_letter() == self.notch // Return true if the rotor is on its notch
+        let old_position = self.position;
+        self.position = (self.position + 1) % 26;
+        // Restituisce true se siamo appena passati dal notch
+        old_position == (self.notch as u8 - b'A') as usize
     }
 
     /// Returns the current letter at the rotor's position.
@@ -161,7 +163,131 @@ impl Rotor {
     /// let current_letter = rotor.get_current_letter();
     /// println!("Current letter: {}", current_letter);
     /// ```
+    #[allow(dead_code)]
     pub fn get_current_letter(&self) -> char {
         self.mapping[self.position] // Return the current letter
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rotor_creation_with_wiring() {
+        let wiring = "EKMFLGDQVZNTOWYHXUSPAIBRCJ";
+        let rotor = Rotor::new(Some(wiring), 'Q', 'A', None).unwrap();
+
+        // Verifica che il wiring sia corretto
+        assert_eq!(
+            rotor.mapping,
+            [
+                'E', 'K', 'M', 'F', 'L', 'G', 'D', 'Q', 'V', 'Z', 'N', 'T', 'O', 'W', 'Y', 'H',
+                'X', 'U', 'S', 'P', 'A', 'I', 'B', 'R', 'C', 'J'
+            ]
+        );
+
+        // Verifica che il reverse wiring sia corretto
+        assert_eq!(
+            rotor.reverse_mapping,
+            [
+                'U', 'W', 'Y', 'G', 'A', 'D', 'F', 'P', 'V', 'Z', 'B', 'E', 'C', 'K', 'M', 'T',
+                'H', 'X', 'S', 'L', 'R', 'I', 'N', 'Q', 'O', 'J'
+            ]
+        );
+
+        // Verifica la posizione iniziale
+        assert_eq!(rotor.position, 0); // 'A' corrisponde a 0
+    }
+
+    #[test]
+    fn test_rotor_creation_with_seed() {
+        let seed = 12345;
+        let rotor = Rotor::new(None, 'Q', 'A', Some(seed)).unwrap();
+
+        // Verifica che il wiring sia una permutazione valida dell'alfabeto
+        let mut sorted_mapping = rotor.mapping.to_vec();
+        sorted_mapping.sort();
+        assert_eq!(
+            sorted_mapping,
+            [
+                'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+            ]
+        );
+    }
+
+    #[test]
+    fn test_forward_encryption() {
+        let wiring = "EKMFLGDQVZNTOWYHXUSPAIBRCJ";
+        let rotor = Rotor::new(Some(wiring), 'Q', 'A', None).unwrap();
+
+        // Verifica la cifratura in avanti
+        assert_eq!(rotor.forward('A').unwrap(), 'E');
+        assert_eq!(rotor.forward('B').unwrap(), 'K');
+        assert_eq!(rotor.forward('C').unwrap(), 'M');
+    }
+
+    #[test]
+    fn test_reverse_encryption() {
+        let wiring = "EKMFLGDQVZNTOWYHXUSPAIBRCJ";
+        let rotor = Rotor::new(Some(wiring), 'Q', 'A', None).unwrap();
+
+        // Verifica la cifratura all'indietro
+        assert_eq!(rotor.reverse('E').unwrap(), 'A');
+        assert_eq!(rotor.reverse('K').unwrap(), 'B');
+        assert_eq!(rotor.reverse('M').unwrap(), 'C');
+    }
+
+    #[test]
+    fn test_rotor_rotation() {
+        let wiring = "EKMFLGDQVZNTOWYHXUSPAIBRCJ";
+        let mut rotor = Rotor::new(Some(wiring), 'Q', 'A', None).unwrap();
+
+        // Rotazione iniziale (A -> B)
+        assert!(!rotor.rotate());
+        assert_eq!(rotor.position, 1);
+
+        // Ruota fino a Q (posizione 16)
+        for _ in 0..15 {
+            assert!(!rotor.rotate());
+        }
+
+        // Rotazione Q -> R (dovrebbe attivare il notch)
+        assert!(rotor.rotate());
+        assert_eq!(rotor.position, 17); // R è la posizione 17
+    }
+
+    #[test]
+    fn test_get_current_letter() {
+        let wiring = "EKMFLGDQVZNTOWYHXUSPAIBRCJ";
+        let rotor = Rotor::new(Some(wiring), 'Q', 'A', None).unwrap();
+
+        // Verifica la lettera corrente
+        assert_eq!(rotor.get_current_letter(), 'E'); // Posizione iniziale 'A' -> 'E'
+    }
+
+    #[test]
+    fn test_invalid_wiring_length() {
+        let wiring = "EKMFLGDQVZNTOWYHXUSPAIBRC"; // 25 caratteri (invalido)
+        let result = Rotor::new(Some(wiring), 'Q', 'A', None);
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "The rotor wiring must have exactly 26 characters"
+        );
+    }
+
+    #[test]
+    fn test_invalid_notch_or_position() {
+        let wiring = "EKMFLGDQVZNTOWYHXUSPAIBRCJ";
+        let result = Rotor::new(Some(wiring), 'q', 'A', None); // Notch non valido
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "The notch and position must be valid ASCII uppercase letters ('A'-'Z')"
+        );
     }
 }
