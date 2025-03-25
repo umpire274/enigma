@@ -6,7 +6,7 @@ use rand::{seq::SliceRandom, SeedableRng};
 /// A rotor is a core component of the Enigma machine that performs a substitution cipher.
 /// It has a mapping of characters for encryption in the forward and reverse directions,
 /// a notch that triggers the next rotor to rotate, and a current position.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Rotor {
     /// The mapping of characters for encryption in the forward direction.
     pub mapping: [char; 26],
@@ -147,10 +147,14 @@ impl Rotor {
     /// println!("Should rotate next rotor: {}", should_rotate_next);
     /// ```
     pub fn rotate(&mut self) -> bool {
-        let old_position = self.position;
+        // Calcola se la prossima rotazione PORTERÀ SULLA tacca
+        let will_be_at_notch = (self.position + 1) % 26 == (self.notch as u8 - b'A') as usize;
+
+        // Avanza la posizione
         self.position = (self.position + 1) % 26;
-        // Restituisce true se siamo appena passati dal notch
-        old_position == (self.notch as u8 - b'A') as usize
+
+        // Restituisce true se STA PER PASSARE la tacca
+        will_be_at_notch
     }
 
     /// Returns the current letter at the rotor's position.
@@ -167,11 +171,46 @@ impl Rotor {
     pub fn get_current_letter(&self) -> char {
         self.mapping[self.position] // Return the current letter
     }
+
+    /// Returns the current position of the rotor as an index (0-25)
+    #[allow(dead_code)]
+    pub fn current_position(&self) -> usize {
+        (self.position as u8 - b'A') as usize
+    }
+
+    #[allow(dead_code)]
+    pub fn set_position_before_notch(&mut self) {
+        let notch_pos = (self.notch as u8 - b'A') as usize;
+        self.position = notch_pos.checked_sub(1).unwrap_or(25);
+    }
+
+    /// Creates the reverse mapping from the forward wiring
+    #[allow(dead_code)]
+    pub fn create_reverse_mapping(wiring: &str) -> [char; 26] {
+        let mut reverse = ['A'; 26];
+        for (i, c) in wiring.chars().enumerate() {
+            let pos = (c as u8 - b'A') as usize;
+            reverse[pos] = (b'A' + i as u8) as char;
+        }
+        reverse
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_rotate_basic() {
+        let mut rotor = Rotor {
+            mapping: ['A'; 26],
+            reverse_mapping: ['A'; 26],
+            notch: 'B',  // Tacca in posizione 1
+            position: 0, // 'A'
+        };
+        assert!(rotor.rotate()); // 'A' → 'B' (dovrebbe segnalare la tacca)
+        assert_eq!(rotor.position, 1);
+    }
 
     #[test]
     fn test_rotor_creation_with_wiring() {
@@ -242,20 +281,28 @@ mod tests {
     #[test]
     fn test_rotor_rotation() {
         let wiring = "EKMFLGDQVZNTOWYHXUSPAIBRCJ";
-        let mut rotor = Rotor::new(Some(wiring), 'Q', 'A', None).unwrap();
+        let reverse = Rotor::create_reverse_mapping(wiring);
+        let mut rotor = Rotor {
+            mapping: wiring.chars().collect::<Vec<_>>().try_into().unwrap(),
+            reverse_mapping: reverse,
+            notch: 'Q',  // Tacca in posizione 16 ('Q')
+            position: 0, // Posizione iniziale: 'A' (0)
+        };
 
-        // Rotazione iniziale (A -> B)
-        assert!(!rotor.rotate());
-        assert_eq!(rotor.position, 1);
-
-        // Ruota fino a Q (posizione 16)
+        // Ruota 15 volte (da 'A' a 'P')
         for _ in 0..15 {
-            assert!(!rotor.rotate());
+            assert!(!rotor.rotate(), "Non dovrebbe segnalare la tacca");
         }
 
-        // Rotazione Q -> R (dovrebbe attivare il notch)
-        assert!(rotor.rotate());
-        assert_eq!(rotor.position, 17); // R è la posizione 17
+        // 16° rotazione (da 'P' a 'Q') - dovrebbe segnalare la tacca
+        assert!(
+            rotor.rotate(),
+            "Dovrebbe segnalare il passaggio della tacca"
+        );
+        assert_eq!(rotor.position, 16); // 'Q'
+
+        // Rotazione successiva (da 'Q' a 'R') - non dovrebbe segnalare
+        assert!(!rotor.rotate(), "Non dovrebbe segnalare la tacca");
     }
 
     #[test]
@@ -289,5 +336,109 @@ mod tests {
             result.unwrap_err(),
             "The notch and position must be valid ASCII uppercase letters ('A'-'Z')"
         );
+    }
+
+    #[test]
+    fn test_rotate_with_notch_at_a() {
+        let wiring = "EKMFLGDQVZNTOWYHXUSPAIBRCJ";
+        let reverse = Rotor::create_reverse_mapping(wiring);
+        let mut rotor = Rotor {
+            mapping: wiring.chars().collect::<Vec<_>>().try_into().unwrap(),
+            reverse_mapping: reverse,
+            notch: 'A',   // Tacca in posizione 0
+            position: 25, // Partiamo da 'Z' (posizione 25)
+        };
+
+        // Rotazione 1: 'Z' → 'A' - deve segnalare il passaggio della tacca
+        assert!(rotor.rotate(), "Dovrebbe segnalare passaggio tacca 'A'");
+        assert_eq!(rotor.position, 0);
+
+        // Rotazione 2: 'A' → 'B' - nessun passaggio tacca
+        assert!(!rotor.rotate(), "Non dovrebbe segnalare passaggio tacca");
+        assert_eq!(rotor.position, 1);
+    }
+
+    #[test]
+    fn test_rotate_with_notch_at_b() {
+        let mut rotor = Rotor {
+            mapping: ['A'; 26],
+            reverse_mapping: ['A'; 26],
+            notch: 'B',  // Notch at position 1
+            position: 0, // Starting at 'A'
+        };
+
+        // First rotation to 'B' - should trigger notch
+        assert!(rotor.rotate());
+        assert_eq!(rotor.position, 1);
+
+        // Next rotation shouldn't trigger
+        assert!(!rotor.rotate());
+        assert_eq!(rotor.position, 2);
+    }
+
+    #[test]
+    fn test_full_rotation() {
+        let mut rotor = Rotor {
+            mapping: ['A'; 26],
+            reverse_mapping: ['A'; 26],
+            notch: 'A',
+            position: 0,
+        };
+
+        // Rotate 25 times (shouldn't trigger notch)
+        for _ in 0..25 {
+            assert!(!rotor.rotate());
+        }
+
+        // 26th rotation (back to 'A') - should trigger
+        assert!(rotor.rotate());
+        assert_eq!(rotor.position, 0);
+    }
+
+    #[test]
+    fn test_notch_behavior_all_positions() {
+        for notch_char in 'A'..='Z' {
+            let notch_pos = (notch_char as u8 - b'A') as usize;
+            let prev_pos = if notch_pos == 0 { 25 } else { notch_pos - 1 };
+
+            let mut rotor = Rotor {
+                mapping: ['A'; 26],
+                reverse_mapping: ['A'; 26],
+                notch: notch_char,
+                position: prev_pos,
+            };
+
+            // Rotazione dovrebbe segnalare il passaggio della tacca
+            assert!(rotor.rotate(), "Failed for notch at {}", notch_char);
+            assert_eq!(rotor.position, notch_pos);
+        }
+    }
+
+    #[test]
+    fn test_notch_at_a() {
+        let mut rotor = Rotor {
+            mapping: ['A'; 26],
+            reverse_mapping: ['A'; 26],
+            notch: 'A',
+            position: 25, // 'Z'
+        };
+
+        // Rotazione da 'Z' a 'A' - dovrebbe segnalare
+        assert!(rotor.rotate());
+        assert_eq!(rotor.position, 0);
+    }
+
+    #[test]
+    fn test_multiple_rotations() {
+        let mut rotor = Rotor {
+            mapping: ['A'; 26],
+            reverse_mapping: ['A'; 26],
+            notch: 'C', // Posizione 2
+            position: 0,
+        };
+
+        assert!(!rotor.rotate()); // A→B
+        assert!(rotor.rotate()); // B→C (segnala)
+        assert!(!rotor.rotate()); // C→D
     }
 }
