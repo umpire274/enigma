@@ -1,4 +1,6 @@
 use std::io::{self, Write};
+use crate::crypto::{decrypt_message, encrypt_message};
+use crate::enigma::utils;
 
 /// Prompts the user for input and returns the entered text.
 ///
@@ -7,6 +9,7 @@ use std::io::{self, Write};
 ///
 /// # Returns
 /// The user's input as a `String`, trimmed of leading and trailing whitespace.
+#[allow(dead_code)]
 pub fn get_user_input(prompt: &str) -> String {
     print!("{}", prompt);
     io::stdout().flush().unwrap(); // Ensures the prompt is printed immediately
@@ -22,6 +25,7 @@ pub fn get_user_input(prompt: &str) -> String {
 ///
 /// # Arguments
 /// * `output` - The output string to display.
+#[allow(dead_code)]
 pub fn display_output<W: Write>(output: &str, mut writer: W) {
     writeln!(writer, "Encrypted/Decrypted text: {}", output).unwrap();
 }
@@ -82,6 +86,48 @@ pub fn postprocess_output(output: &str) -> String {
     }
 
     result
+}
+
+pub fn run_cli() {
+    println!("Enigma Machine CLI Mode");
+
+    // Carica la configurazione
+    let config = match utils::load_config() {
+        Ok(config) => config,
+        Err(e) => {
+            eprintln!("Failed to load configuration: {}", e);
+            return;
+        }
+    };
+
+    // Chiavi AES
+    let key = &utils::KEY[..];
+    let iv = &utils::IV[..];
+
+    // Input utente
+    println!("Enter message:");
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+
+    println!("Encrypt (e) or decrypt (d)?");
+    let mut operation = String::new();
+    std::io::stdin().read_line(&mut operation).unwrap();
+
+    // Elabora il messaggio
+    let result = match operation.trim() {
+        "e" => encrypt_message(&input, &config, key, iv),
+        "d" => decrypt_message(&input, &config, key, iv),
+        _ => {
+            eprintln!("Invalid operation");
+            return;
+        }
+    };
+
+    // Mostra il risultato
+    match result {
+        Ok(output) => println!("Result: {}", output),
+        Err(e) => eprintln!("Error: {}", e),
+    }
 }
 
 #[cfg(test)]
