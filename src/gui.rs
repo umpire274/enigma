@@ -3,6 +3,8 @@ use crate::crypto::{decrypt_message, encrypt_message};
 use crate::enigma;
 use crate::enigma::utils::Config;
 use eframe::egui;
+use eframe::egui::IconData;
+use std::path::Path;
 
 pub struct EnigmaApp {
     input_text: String,
@@ -56,35 +58,46 @@ impl eframe::App for EnigmaApp {
             // Operation Section con radio button colorati
             ui.horizontal(|ui| {
                 // Radio Encrypt (verde)
-                let encrypt_text = egui::RichText::new("🔒 Encrypt")
-                    .color(if self.operation == Operation::Encrypt {
+                let encrypt_text = egui::RichText::new("🔒 Encrypt").color(
+                    if self.operation == Operation::Encrypt {
                         egui::Color32::from_rgb(56, 142, 60) // Verde acceso quando selezionato
                     } else {
                         egui::Color32::GRAY // Grigio quando non selezionato
-                    });
+                    },
+                );
 
-                if ui.radio_value(&mut self.operation, Operation::Encrypt, encrypt_text).clicked() {
+                if ui
+                    .radio_value(&mut self.operation, Operation::Encrypt, encrypt_text)
+                    .clicked()
+                {
                     // Forza ridisegno per feedback visivo immediato
                     ctx.request_repaint();
                 }
 
                 // Radio Decrypt (arancione)
-                let decrypt_text = egui::RichText::new("🔓 Decrypt")
-                    .color(if self.operation == Operation::Decrypt {
+                let decrypt_text = egui::RichText::new("🔓 Decrypt").color(
+                    if self.operation == Operation::Decrypt {
                         egui::Color32::from_rgb(245, 124, 0) // Arancione acceso quando selezionato
                     } else {
                         egui::Color32::GRAY // Grigio quando non selezionato
-                    });
+                    },
+                );
 
-                if ui.radio_value(&mut self.operation, Operation::Decrypt, decrypt_text).clicked() {
+                if ui
+                    .radio_value(&mut self.operation, Operation::Decrypt, decrypt_text)
+                    .clicked()
+                {
                     ctx.request_repaint();
                 }
 
                 // Pulsante Process (blu)
-                if ui.add(
-                    egui::Button::new(rich_text("⚙ Process"))
-                        .fill(egui::Color32::from_rgb(51, 103, 214))
-                ).clicked() {
+                if ui
+                    .add(
+                        egui::Button::new(rich_text("⚙ Process"))
+                            .fill(egui::Color32::from_rgb(51, 103, 214)),
+                    )
+                    .clicked()
+                {
                     self.process_message();
                 }
             });
@@ -102,10 +115,14 @@ impl eframe::App for EnigmaApp {
             // Pulsante Copy (viola) e feedback
             ui.add_space(5.0);
             ui.horizontal(|ui| {
-                if ui.add(
-                    egui::Button::new(rich_text("📋 Copy to clipboard"))
-                        .fill(egui::Color32::from_rgb(123, 31, 162))
-                ).clicked() && !self.output_text.is_empty() {
+                if ui
+                    .add(
+                        egui::Button::new(rich_text("📋 Copy to clipboard"))
+                            .fill(egui::Color32::from_rgb(123, 31, 162)),
+                    )
+                    .clicked()
+                    && !self.output_text.is_empty()
+                {
                     ctx.copy_text(self.output_text.clone());
                     self.show_copied_notice = true;
                     self.copy_time = ctx.input(|i| i.time);
@@ -122,10 +139,10 @@ impl eframe::App for EnigmaApp {
             // Pulsante Quit con icona alternativa e stile garantito
             ui.with_layout(egui::Layout::bottom_up(egui::Align::RIGHT), |ui| {
                 let quit_btn = egui::Button::new(
-                    egui::RichText::new("🚪 Quit")  // Icona porta + testo
-                        .color(egui::Color32::WHITE)
+                    egui::RichText::new("🚪 Quit") // Icona porta + testo
+                        .color(egui::Color32::WHITE),
                 )
-                    .fill(egui::Color32::from_rgb(198, 40, 40));  // Rosso
+                .fill(egui::Color32::from_rgb(198, 40, 40)); // Rosso
 
                 if ui.add(quit_btn).clicked() {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -145,6 +162,41 @@ fn rich_text(text: impl Into<String>) -> egui::RichText {
 }
 
 impl EnigmaApp {
+    // Aggiungi questa funzione alla tua implementazione di EnigmaApp
+    fn load_window_icon() -> Option<IconData> {
+        let icon_path = match std::env::consts::OS {
+            "windows" => ("assets/icon.ico", "Windows"),
+            "macos" => ("assets/icon.icns", "macOS"),
+            _ => ("assets/icon.png", "Linux/Unix"),
+        };
+
+        match Self::try_load_icon(icon_path.0) {
+            Ok(icon) => {
+                log::info!("Icona {} caricata con successo", icon_path.1);
+                Some(icon)
+            }
+            Err(e) => {
+                log::warn!("Impossibile caricare l'icona per {}: {}", icon_path.1, e);
+                None
+            }
+        }
+    }
+
+    fn try_load_icon(path: impl AsRef<Path>) -> Result<IconData, image::ImageError> {
+        let path = path.as_ref();
+        log::debug!("Caricamento icona da: {:?}", path);
+
+        let image = image::open(path)?;
+        let rgba = image.into_rgba8();
+        let (width, height) = rgba.dimensions();
+
+        Ok(IconData {
+            rgba: rgba.into_raw(),
+            width,
+            height,
+        })
+    }
+
     fn process_message(&mut self) {
         let key = &enigma::utils::KEY[..]; // Ottieni una slice &[u8] da KEY
         let iv = &enigma::utils::IV[..]; // Ottieni una slice &[u8] da IV
@@ -171,7 +223,8 @@ pub fn run_gui() -> eframe::Result<()> {
             .with_inner_size([800.0, 600.0])
             .with_min_inner_size([400.0, 300.0]) // Dimensione minima
             .with_resizable(true) // Abilita il ridimensionamento
-            .with_title("Enigma Machine"),
+            .with_title("Enigma Machine")
+            .with_icon(EnigmaApp::load_window_icon().unwrap_or_default()),
         ..Default::default()
     };
 
