@@ -1,4 +1,5 @@
 use std::io::{self, Write};
+use log::debug;
 use crate::crypto::{decrypt_message, encrypt_message};
 use crate::enigma::utils;
 
@@ -92,7 +93,7 @@ pub fn run_cli() {
     println!("Enigma Machine CLI Mode");
 
     // Carica la configurazione
-    let config = match utils::load_config() {
+    let mut config = match utils::Config::load() {
         Ok(config) => config,
         Err(e) => {
             eprintln!("Failed to load configuration: {}", e);
@@ -113,10 +114,11 @@ pub fn run_cli() {
     let mut operation = String::new();
     std::io::stdin().read_line(&mut operation).unwrap();
 
+    debug!("Config from file: {:?}", config);
     // Elabora il messaggio
     let result = match operation.trim() {
         "e" => encrypt_message(&input, &config, key, iv),
-        "d" => decrypt_message(&input, &config, key, iv),
+        "d" => decrypt_message(&input, &mut config, key, iv),
         _ => {
             eprintln!("Invalid operation");
             return;

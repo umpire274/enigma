@@ -7,8 +7,11 @@ mod gui;
 
 use crate::enigma::utils;
 use std::env;
+use log::info;
 
 fn main() {
+    env_logger::init();
+    info!("Application start...");
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 1 && args[1] == "--cli" {
@@ -20,4 +23,5 @@ fn main() {
             eprintln!("GUI error: {}", e);
         }
     }
+    info!("Application ended.");
 }

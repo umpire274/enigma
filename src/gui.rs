@@ -1,10 +1,10 @@
-// src/gui.rs
 use crate::crypto::{decrypt_message, encrypt_message};
 use crate::enigma;
 use crate::enigma::utils::Config;
 use eframe::egui;
 use eframe::egui::IconData;
 use std::path::Path;
+use log::debug;
 
 pub struct EnigmaApp {
     input_text: String,
@@ -23,15 +23,21 @@ enum Operation {
 
 impl Default for EnigmaApp {
     fn default() -> Self {
+        // Prova a caricare la configurazione dal file
+        let config = Config::load().unwrap_or_else(|e| {
+            log::warn!("Failed to load config: {}, using defaults", e);
+            Config {
+                n_rt: 3,
+                plugboard_pairs: vec![('A', 'B'), ('C', 'D')],
+                sstk: 12345,
+            }
+        });
+
         Self {
             input_text: String::new(),
             output_text: String::new(),
             operation: Operation::Encrypt,
-            config: Config {
-                n_rt: 3,
-                plugboard_pairs: vec![('A', 'B'), ('C', 'D')],
-                sstk: 12345,
-            },
+            config,
             show_copied_notice: false,
             copy_time: 0.0,
         }
@@ -201,11 +207,12 @@ impl EnigmaApp {
         let key = &enigma::utils::KEY[..]; // Ottieni una slice &[u8] da KEY
         let iv = &enigma::utils::IV[..]; // Ottieni una slice &[u8] da IV
 
+        debug!("Config from file: {:?}", self.config);
         self.output_text = match self.operation {
             Operation::Encrypt => encrypt_message(&self.input_text, &self.config, key, iv)
                 .unwrap_or_else(|e| format!("Error: {}", e)),
-            Operation::Decrypt => decrypt_message(&self.input_text, &self.config, key, iv)
-                .unwrap_or_else(|e| format!("Error: {}", e)),
+            Operation::Decrypt => decrypt_message(&self.input_text, &mut self.config, key, iv)
+                    .unwrap_or_else(|e| format!("Error: {}", e)),
         };
     }
 

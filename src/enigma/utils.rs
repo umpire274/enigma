@@ -3,119 +3,66 @@ use lazy_static::lazy_static;
 use openssl::error::ErrorStack;
 use openssl::symm::{Cipher, Crypter, Mode};
 use serde::{Deserialize, Serialize};
-use serde_json;
-use std::env;
-use std::fs;
-use std::io::{self, Write};
-use std::path::Path;
+use std::{fs, path::PathBuf};
+use log::debug;
 
 lazy_static! {
-    /// AES-256 key (32 bytes) used for encryption and decryption.
     pub static ref KEY: [u8; 32] = *b"0123456789abcdef0123456789abcdef";
-
-    /// Initialization vector (IV) for AES-256-GCM (16 bytes).
     pub static ref IV: [u8; 16] = *b"1234567890abcdef";
 }
 
-/// A fixed hash value used for generating seeds in the Enigma machine.
 pub static FIXED_HASH: u64 = 1737;
 
-/// Represents the configuration for initializing an Enigma machine.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Config {
-    /// Number of rotors in the Enigma machine.
     pub n_rt: usize,
-
-    /// Plugboard pairs for character swapping in the Enigma machine.
     pub plugboard_pairs: Vec<(char, char)>,
-
-    /// Seed for random generation of rotors, reflectors, and plugboard.
     pub sstk: usize,
 }
 
-/// Loads the Enigma machine configuration from the config file.
-///
-/// # Returns
-/// - `Ok(Config)`: The configuration loaded from the file.
-/// - `Err(io::Error)`: An error if the file cannot be read or parsed.
-///
-/// # Example
-/// ```rust
-/// let config = load_config()?;
-/// println!("Number of rotors: {}", config.n_rt);
-/// ```
-pub fn load_config() -> io::Result<Config> {
-    // Ensure the config file exists
-    let config_path = ensure_config_file()?;
+impl Config {
+    pub fn load() -> Result<Self, String> {
+        let path = Self::config_path()?;
+        if !path.exists() {
+            Self::create_default_config(&path)?;
+        }
 
-    // Read the config file
-    let config_str = fs::read_to_string(&config_path)?;
-
-    // Parse the JSON configuration
-    let config: Config = serde_json::from_str(&config_str)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
-
-    Ok(config)
-}
-
-/// Checks if the configuration file exists. If not, creates the necessary directory and file.
-///
-/// # Returns
-/// - `Ok(String)`: The path to the configuration file.
-/// - `Err(io::Error)`: An error if the directory or file cannot be created.
-///
-/// # Example
-/// ```rust
-/// let config_path = ensure_config_file()?;
-/// println!("Config file path: {}", config_path);
-/// ```
-pub fn ensure_config_file() -> io::Result<String> {
-    // Get the appropriate config directory based on the OS
-    let config_dir = get_config_dir()?;
-    let config_path = config_dir.join("config.json");
-
-    // Check if the config file exists
-    if !config_path.exists() {
-        // Create the directory if it doesn't exist
-        fs::create_dir_all(&config_dir)?;
-
-        // Create a default configuration
-        let default_config = serde_json::json!({
-            "n_rt": 3, // Number of rotors
-            "plugboard_pairs": [['A', 'B'], ['C', 'D']], // Plugboard pairs
-            "sstk": 12345 // Seed for random generation
-        });
-
-        // Write the default configuration to the file
-        let mut file = fs::File::create(&config_path)?;
-        file.write_all(serde_json::to_string_pretty(&default_config)?.as_bytes())?;
+        let data = fs::read_to_string(path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&data).map_err(|e| e.to_string())
     }
 
-    Ok(config_path.to_string_lossy().into_owned())
-}
+    pub fn save(&self) -> Result<(), String> {
+        let path = Self::config_path()?;
+        debug!("saving config: {}", path.display());
+        let temp_path = path.with_extension("tmp");
 
-/// Returns the configuration directory based on the operating system.
-///
-/// - On macOS/Linux: `$HOME/.enigma`
-/// - On Windows: `%APPDATA%\enigma`
-///
-/// # Returns
-/// - `Ok(PathBuf)`: The path to the configuration directory.
-/// - `Err(io::Error)`: An error if the home directory cannot be determined.
-///
-/// # Example
-/// ```rust
-/// let config_dir = get_config_dir()?;
-/// println!("Config directory: {:?}", config_dir);
-/// ```
-fn get_config_dir() -> io::Result<std::path::PathBuf> {
-    let home_dir = if cfg!(target_os = "windows") {
-        env::var("APPDATA").map(|path| Path::new(&path).join("enigma"))
-    } else {
-        env::var("HOME").map(|path| Path::new(&path).join(".enigma"))
-    };
+        let config_str = serde_json::to_string_pretty(self)
+            .map_err(|e| e.to_string())?;
 
-    home_dir.map_err(|_| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))
+        fs::write(&temp_path, config_str).map_err(|e| e.to_string())?;
+        fs::rename(temp_path, path).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    fn config_path() -> Result<PathBuf, String> {
+        dirs::home_dir()
+            .map(|p| p.join(".enigma/config.json"))
+            .ok_or("Home directory not found".to_string())
+    }
+
+    fn create_default_config(path: &PathBuf) -> Result<(), String> {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+
+        let default_config = Config {
+            n_rt: 3,
+            plugboard_pairs: vec![('A', 'B'), ('C', 'D')],
+            sstk: 12345,
+        };
+
+        default_config.save()
+    }
 }
 
 /// Encrypts a message using AES-256-GCM.

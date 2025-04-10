@@ -1,11 +1,10 @@
-// src/crypto.rs
-
 use crate::cli;
 use crate::enigma::enigma::EnigmaMachine;
 use crate::enigma::utils;
 use base64::engine::general_purpose::STANDARD as base64_engine;
 use base64::Engine;
 use chrono::Local;
+use log::{debug, info, warn};
 
 /// Encrypts a message using the Enigma machine and AES encryption.
 ///
@@ -68,7 +67,7 @@ pub fn encrypt_message(
 /// The decrypted message as a string.
 pub fn decrypt_message(
     input: &str,
-    config: &utils::Config,
+    config: &mut utils::Config,
     key: &[u8],
     iv: &[u8],
 ) -> Result<String, String> {
@@ -103,6 +102,11 @@ pub fn decrypt_message(
     let data = premex[0];
     let pairs = premex[1];
 
+    debug!("premessage: {}", premessage);
+    debug!("premex: {:?}", premex);
+    debug!("data: {}", data);
+    debug!("pairs: {}", pairs);
+
     let plugboard_pairs: Vec<(char, char)> = pairs
         .chars()
         .collect::<Vec<char>>()
@@ -116,10 +120,42 @@ pub fn decrypt_message(
             Err(e) => return Err(format!("Error creating Enigma machine: {}", e)),
         };
 
-    match enigma.encrypt_message(enigma_message) {
-        Ok(decrypted) => Ok(decrypted),
-        Err(e) => Err(format!("Error decrypting with Enigma: {}", e)),
+    let decrypted = enigma
+        .encrypt_message(enigma_message)
+        .map_err(|e| format!("Error decrypting with Enigma: {}", e))?;
+
+    if decrypted.contains("MESSAGGIOPERTE") {
+        info!("Trigger rilevato: aggiornamento configurazione");
+
+        // Estrai le parti separate dal pipe
+        let config_parts: Vec<&str> = premessage.split('|').collect();
+        if config_parts.len() >= 2 {
+            let config_json = format!(
+                r#"{{"n_rt":{},"plugboard_pairs":{},"sstk":{}}}"#,
+                config.n_rt,  // Mantieni n_rt esistente o usa nuovo valore se disponibile
+                serde_json::to_string(&config_parts[1].chars()
+                    .collect::<Vec<char>>()
+                    .chunks(2)
+                    .map(|chunk| (chunk[0], chunk[1]))
+                    .collect::<Vec<(char, char)>>())
+                    .map_err(|e| format!("Serialization error: {}", e))?,
+                config.sstk  // Mantieni sstk esistente o usa nuovo valore se disponibile
+            );
+
+            debug!("Config from message: {}", config_json);
+
+            if let Ok(new_config) = serde_json::from_str::<utils::Config>(&config_json) {
+                debug!("new_config: {:?}", new_config);
+                *config = new_config;
+                config.save().map_err(|e| format!("Failed to save config: {}", e))?;
+                info!("Configurazione aggiornata con successo");
+            } else {
+                warn!("Formato configurazione non valido");
+            }
+        }
     }
+
+    Ok(decrypted)
 }
 
 #[cfg(test)]
@@ -176,71 +212,71 @@ mod tests {
     #[test]
     fn test_decrypt_message_success() {
         let config = get_test_config();
-        let input = "Hello, World!";
-        let expected_output = "HELLOWORLD";
+        let input = "HELLOWORLD"; // Input già in formato atteso (maiuscolo, senza spazi)
 
-        // Cifra il messaggio prima di decifrarlo
-        let encrypted = encrypt_message(input, &config, TEST_KEY, TEST_IV).unwrap();
-        let result = decrypt_message(&encrypted, &config, TEST_KEY, TEST_IV);
+        let encrypted =
+            encrypt_message(input, &config, TEST_KEY, TEST_IV).expect("Encryption failed");
+        let decrypted = decrypt_message(&encrypted, &mut config.clone(), TEST_KEY, TEST_IV)
+            .expect("Decryption failed");
 
-        assert!(result.is_ok(), "Decryption should succeed");
-        let decrypted = result.unwrap();
-        assert_eq!(
-            decrypted, expected_output,
-            "Decrypted message should match the original input"
-        );
+        assert_eq!(decrypted, input, "Decrypted message should match original");
     }
 
     #[test]
     fn test_decrypt_message_invalid_base64() {
-        let config = get_test_config();
-        let invalid_base64 = "InvalidBase64!!"; // Input non valido per Base64
+        let mut config = get_test_config();
+        let result = decrypt_message("InvalidBase64!!", &mut config, TEST_KEY, TEST_IV);
 
-        let result = decrypt_message(invalid_base64, &config, TEST_KEY, TEST_IV);
-
-        assert!(
-            result.is_err(),
-            "Decryption should fail due to invalid Base64 input"
-        );
-        assert!(result
-            .unwrap_err()
-            .contains("Error decoding base64 message"));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("base64"));
     }
 
     #[test]
     fn test_decrypt_message_invalid_aes() {
-        let config = get_test_config();
-        let invalid_aes = base64_engine.encode(b"InvalidAESData"); // Dati AES non validi
+        let mut config = get_test_config();
+        let invalid_data = base64_engine.encode(b"InvalidAESData");
+        let result = decrypt_message(&invalid_data, &mut config, TEST_KEY, TEST_IV);
 
-        let result = decrypt_message(&invalid_aes, &config, TEST_KEY, TEST_IV);
-
-        assert!(
-            result.is_err(),
-            "Decryption should fail due to invalid AES data"
-        );
-        assert!(result.unwrap_err().to_string().contains("error")); // Verifica che ci sia un errore
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("AES"));
     }
 
     #[test]
-    fn test_decrypt_message_invalid_enigma() {
-        let config = get_test_config();
-        let input = "Hello, World!";
+    fn test_decrypt_message_invalid_config() {
+        let mut invalid_config = Config {
+            n_rt: 0, // Configurazione invalida
+            ..get_test_config()
+        };
 
-        // Cifra il messaggio prima di decifrarlo
-        let encrypted = encrypt_message(input, &config, TEST_KEY, TEST_IV).unwrap();
+        let encrypted = encrypt_message("TEST", &get_test_config(), TEST_KEY, TEST_IV)
+            .expect("Encryption failed");
+        let result = decrypt_message(&encrypted, &mut invalid_config, TEST_KEY, TEST_IV);
 
-        // Modifica la configurazione per causare un errore nella creazione di Enigma
-        let mut invalid_config = config;
-        invalid_config.n_rt = 0; // Numero di rotori non valido
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Enigma"));
+    }
 
-        let result = decrypt_message(&encrypted, &invalid_config, TEST_KEY, TEST_IV);
+    #[test]
+    fn test_config_update_trigger() {
+        let mut config = get_test_config();
+        let new_config = Config {
+            n_rt: 4,
+            plugboard_pairs: vec![('X', 'Y')],
+            sstk: 67890,
+        };
 
-        assert!(
-            result.is_err(),
-            "Decryption should fail due to invalid Enigma configuration"
+        // Simula un messaggio con trigger e nuova configurazione
+        let message = format!(
+            "{}|MESSAGGIOPERTE",
+            serde_json::to_string(&new_config).unwrap()
         );
-        assert!(result
-            .unwrap_err()
-            .contains("Error creating Enigma machine"));
+
+        let encrypted =
+            encrypt_message(&message, &config, TEST_KEY, TEST_IV).expect("Encryption failed");
+        let _ =
+            decrypt_message(&encrypted, &mut config, TEST_KEY, TEST_IV).expect("Decryption failed");
+
+        assert_eq!(config.n_rt, new_config.n_rt);
+        assert_eq!(config.plugboard_pairs, new_config.plugboard_pairs);
     }
 }
