@@ -8,6 +8,7 @@ mod gui;
 use crate::enigma::utils;
 use std::env;
 use log::info;
+use crate::cli::run_cli;
 
 fn main() {
     env_logger::init();
@@ -16,7 +17,10 @@ fn main() {
 
     if args.len() > 1 && args[1] == "--cli" {
         // Modalità CLI
-        cli::run_cli();
+        if let Err(e) = run_cli() {
+            eprintln!("Error: {}", e);
+            std::process::exit(1);
+        }
     } else {
         // Modalità GUI (default)
         if let Err(e) = gui::run_gui() {

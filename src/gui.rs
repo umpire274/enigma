@@ -190,7 +190,7 @@ impl EnigmaApp {
 
     fn try_load_icon(path: impl AsRef<Path>) -> Result<IconData, image::ImageError> {
         let path = path.as_ref();
-        log::debug!("Caricamento icona da: {:?}", path);
+        debug!("Caricamento icona da: {:?}", path);
 
         let image = image::open(path)?;
         let rgba = image.into_rgba8();
@@ -204,15 +204,28 @@ impl EnigmaApp {
     }
 
     fn process_message(&mut self) {
-        let key = &enigma::utils::KEY[..]; // Ottieni una slice &[u8] da KEY
-        let iv = &enigma::utils::IV[..]; // Ottieni una slice &[u8] da IV
+        let key = &enigma::utils::KEY[..];
+        let iv = &enigma::utils::IV[..];
 
-        debug!("Config from file: {:?}", self.config);
         self.output_text = match self.operation {
-            Operation::Encrypt => encrypt_message(&self.input_text, &self.config, key, iv)
-                .unwrap_or_else(|e| format!("Error: {}", e)),
-            Operation::Decrypt => decrypt_message(&self.input_text, &mut self.config, key, iv)
-                    .unwrap_or_else(|e| format!("Error: {}", e)),
+            Operation::Encrypt => {
+                encrypt_message(&self.input_text, Some(&self.config), key, iv)
+                    .unwrap_or_else(|e| format!("Error: {}", e))
+            }
+            Operation::Decrypt => {
+                match decrypt_message(&self.input_text, key, iv) {
+                    Ok((decrypted, Some(new_config))) => {
+                        self.config = new_config;
+                        if let Err(e) = self.config.save() {
+                            format!("Error saving config: {}", e)
+                        } else {
+                            decrypted
+                        }
+                    }
+                    Ok((decrypted, None)) => decrypted,
+                    Err(e) => format!("Error: {}", e),
+                }
+            }
         };
     }
 
