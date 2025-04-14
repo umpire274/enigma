@@ -3,8 +3,8 @@ use crate::enigma;
 use crate::enigma::utils::Config;
 use eframe::egui;
 use eframe::egui::IconData;
+use log::{debug, error};
 use std::path::Path;
-use log::debug;
 
 pub struct EnigmaApp {
     input_text: String,
@@ -208,24 +208,23 @@ impl EnigmaApp {
         let iv = &enigma::utils::IV[..];
 
         self.output_text = match self.operation {
-            Operation::Encrypt => {
-                encrypt_message(&self.input_text, Some(&self.config), key, iv)
-                    .unwrap_or_else(|e| format!("Error: {}", e))
-            }
-            Operation::Decrypt => {
-                match decrypt_message(&self.input_text, key, iv) {
-                    Ok((decrypted, Some(new_config))) => {
-                        self.config = new_config;
-                        if let Err(e) = self.config.save() {
-                            format!("Error saving config: {}", e)
-                        } else {
-                            decrypted
+            Operation::Encrypt => encrypt_message(&self.input_text, Some(&self.config), key, iv)
+                .unwrap_or_else(|e| format!("Error: {}", e)),
+            Operation::Decrypt => match decrypt_message(&self.input_text, key, iv) {
+                Ok((decrypted, new_config)) => {
+                    if decrypted.contains("MSGS4YOU") {
+                        if let Some(config) = new_config {
+                            self.config = config;
+                            self.config
+                                .save()
+                                .map_err(|e| error!("Config save failed: {}", e))
+                                .ok();
                         }
                     }
-                    Ok((decrypted, None)) => decrypted,
-                    Err(e) => format!("Error: {}", e),
+                    decrypted
                 }
-            }
+                Err(e) => format!("Decryption failed: {}", e),
+            },
         };
     }
 

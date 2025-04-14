@@ -1,6 +1,6 @@
 [package]
 name = "enigma"
-version = "0.5.6"
+version = "0.5.7"
 edition = "2021"
 authors = ["Alessandro Maestri <umpire274@gmail.com>"]
 description = "Modern Enigma MAchine"
