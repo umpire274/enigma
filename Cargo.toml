@@ -2,28 +2,46 @@
 name = "enigma"
 version = "0.5.7"
 edition = "2021"
-authors = ["Alessandro Maestri <umpire274@gmail.com>"]
-description = "Modern Enigma MAchine"
+authors = ["Umpire274 <umpire274@gmail.com>"]
+description = "Modern implementation of the Enigma machine in Rust"
 license = "MIT"
-repository = "https://github.com/umpire274/enigma.git"
+repository = "https://github.com/umpire274/enigma"
 
-[target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", features = ["winuser"] }
-
-[target.'cfg(target_os = "macos")'.dependencies]
-cocoa = "0.26.0"
-
+# -----------------------------
 [dependencies]
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
-rand = "0.9.0"
+rand = "0.9.1"
 chrono = "0.4.40"
 log = "0.4.27"
 env_logger = "0.11.8"
-openssl = "0.10.72"
+openssl = { version = "0.10.72", features = ["vendored"] }
 base64 = "0.22.1"
 lazy_static = "1.5.0"
 egui = "0.31.1"
 eframe = "0.31.1"
 image = "0.25.6"
 dirs = "6.0.0"
+
+# -----------------------------
+[build-dependencies]
+embed-resource = "2.5.1"
+
+# -----------------------------
+[package.metadata.bundle]
+name = "Enigma"
+identifier = "com.umpire274.enigma"
+version = "0.5.7"
+icon = ["assets/icon.icns"]
+short_description = "Modern Enigma Machine"
+long_description = "A Rust implementation of the classic Enigma machine with dynamic rotor generation and cross-platform support."
+copyright = "© 2024 Umpire274"
+category = "Utility"
+
+# -----------------------------
+[profile.release]
+opt-level = "z"       # Ottimizzazione per dimensioni ridotte
+lto = true            # Link Time Optimization
+codegen-units = 1     # Migliore ottimizzazione finale
+panic = "abort"       # Riduce dimensione binario se non serve unwinding
+strip = true          # Rimuove simboli di debug

@@ -1,2 +1,6 @@
 /target
 /.idea
+/dist
+*.dmg
+/build-all.sh
+/build-icons.sh
