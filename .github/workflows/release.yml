@@ -1,6 +1,10 @@
-name: Release
+name: 🚀 Build & Release Enigma
 
-on: [push]
+on:
+  push:
+    tags:
+      - 'v*'    # Trigger al push di un tag tipo v0.5.7
+  workflow_dispatch:  # Avvio manuale se necessario
 
 jobs:
   build:
@@ -10,18 +14,65 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: |
-            x86_64-pc-windows-gnu
-            x86_64-apple-darwin
-            x86_64-unknown-linux-gnu
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v3
       
-      - run: cargo build --release --target ${{ matrix.target }}
-      - uses: actions/upload-artifact@v3
+      - name: 🔢 Estrai versione da Cargo.toml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: 🦀 Installa Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      
+      - name: 📦 Installa cargo-bundle (solo macOS)
+        if: matrix.os == 'macos-latest'
+        run: cargo install cargo-bundle
+      
+      - name: ⚙️ Build progetto con OpenSSL vendored
+        run: cargo build --release --features vendored
+      
+      - name: 📂 Prepara artefatti
+        run: |
+          mkdir dist
+          VERSION=${{ steps.get_version.outputs.version }}
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp target/release/enigma.exe dist/enigma-${VERSION}-windows.exe
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
+            cargo bundle --release
+            cp target/release/bundle/osx/*.dmg dist/enigma-${VERSION}-macos.dmg
+          else
+            tar -czf dist/enigma-${VERSION}-linux.tar.gz -C target/release enigma
+          fi
+        shell: bash
+      
+      - name: ☁️ Upload artefatti
+        uses: actions/upload-artifact@v3
         with:
           name: enigma-${{ matrix.os }}
-          path: target/${{ matrix.target }}/release/enigma
+          path: dist/
+  
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: ⬇️ Scarica artefatti
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+      
+      - name: 🚀 Crea GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*.*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
