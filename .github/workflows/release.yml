@@ -3,8 +3,8 @@ name: 🚀 Build & Release Enigma
 on:
   push:
     tags:
-      - 'v*'    # Trigger al push di un tag tipo v0.5.7
-  workflow_dispatch:  # Avvio manuale se necessario
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,7 +15,7 @@ jobs:
     
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.5.3  # Versione stabile
       
       - name: 🔢 Estrai versione da Cargo.toml
         id: get_version
@@ -24,7 +24,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       
       - name: 🦀 Installa Rust stable
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@v1.0.7  # Ultima stabile
         with:
           toolchain: stable
           override: true
@@ -34,7 +34,7 @@ jobs:
         run: cargo install cargo-bundle
       
       - name: ⚙️ Build progetto con OpenSSL vendored
-        run: cargo build --release --features vendored
+        run: cargo build --release
       
       - name: 📂 Prepara artefatti
         run: |
@@ -51,7 +51,7 @@ jobs:
         shell: bash
       
       - name: ☁️ Upload artefatti
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.3
         with:
           name: enigma-${{ matrix.os }}
           path: dist/
@@ -63,10 +63,10 @@ jobs:
     
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.5.3
       
       - name: ⬇️ Scarica artefatti
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v3.1.3
         with:
           path: artifacts
       
@@ -76,3 +76,11 @@ jobs:
           files: artifacts/**/*.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 📢 Notifica fine release
+        if: always()
+        run: |
+          STATUS=${{ job.status }}
+          curl -H "Content-Type: application/json" \
+               -d "{\"content\": \"🚀 Release completata con stato: $STATUS per Enigma Rust\"}" \
+               ${{ secrets.WEBHOOK_URL }}

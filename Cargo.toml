@@ -1,6 +1,6 @@
 [package]
 name = "enigma"
-version = "0.5.8"
+version = "0.5.9"
 edition = "2021"
 authors = ["Umpire274 <umpire274@gmail.com>"]
 description = "Modern implementation of the Enigma machine in Rust"
