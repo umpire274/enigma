@@ -4,3 +4,4 @@
 *.dmg
 /build-all.sh
 /build-icons.sh
+/assets/enigma_*.png

@@ -1162,7 +1162,7 @@ checksum = "a3d8a32ae18130a3c84dd492d4215c3d913c3b07c6b63c2eb3eb7ff1101ab7bf"
 
 [[package]]
 name = "enigma"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "base64",
  "chrono",
