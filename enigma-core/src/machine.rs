@@ -51,11 +51,7 @@ impl EnigmaMachine {
     ///
     /// The state is updated via the configured stepping strategy
     /// after the transformation.
-    pub fn process_byte(
-        &self,
-        input: u8,
-        state: &mut EnigmaState,
-    ) -> EnigmaResult<u8> {
+    pub fn process_byte(&self, input: u8, state: &mut EnigmaState) -> EnigmaResult<u8> {
         if state.rotor_positions.len() != self.rotors.len() {
             return Err(EnigmaError::InvalidState(
                 "rotor position count does not match rotor count".into(),
@@ -82,17 +78,13 @@ impl EnigmaMachine {
         // Step state AFTER processing
         self.stepping
             .step(state)
-            .map_err(|e| EnigmaError::SteppingError(e))?;
+            .map_err(EnigmaError::SteppingError)?;
 
         Ok(value)
     }
 
     /// Processes a slice of bytes through the Enigma pipeline.
-    pub fn process_bytes(
-        &self,
-        input: &[u8],
-        state: &mut EnigmaState,
-    ) -> EnigmaResult<Vec<u8>> {
+    pub fn process_bytes(&self, input: &[u8], state: &mut EnigmaState) -> EnigmaResult<Vec<u8>> {
         let mut output = Vec::with_capacity(input.len());
 
         for &byte in input {

@@ -47,6 +47,25 @@ impl Reflector {
         }
         Self { mapping }
     }
+
+    /// Creates a simple paired reflector.
+    ///
+    /// Bytes are paired as:
+    /// 0 <-> 1, 2 <-> 3, ..., 254 <-> 255.
+    ///
+    /// This reflector is involutive and non-identity.
+    pub fn paired() -> Self {
+        let mut mapping = [0u8; 256];
+
+        let mut i = 0;
+        while i < 256 {
+            mapping[i] = (i + 1) as u8;
+            mapping[i + 1] = i as u8;
+            i += 2;
+        }
+
+        Self { mapping }
+    }
 }
 
 impl EnigmaComponent for Reflector {

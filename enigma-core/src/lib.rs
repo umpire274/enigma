@@ -17,13 +17,9 @@ pub mod state;
 
 // Core building blocks
 pub mod plugboard;
-pub mod rotor;
 pub mod reflector;
+pub mod rotor;
 pub mod stepping;
-
-// Optional / future extensions
-#[cfg(feature = "crypto")]
-pub mod crypto;
 
 // Public re-exports (stable surface)
 pub use component::EnigmaComponent;

@@ -1,0 +1,9 @@
+/.idea
+/target
+*.db
+*.png
+*.sqlite
+.DS_Store
+.github/copilot-instructions.md
+/examples
+*.zip

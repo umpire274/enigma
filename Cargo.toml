@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "enigma-core",
+    "enigma-cli",
+]
+
+resolver = "2"

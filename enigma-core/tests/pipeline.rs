@@ -1,32 +1,18 @@
-use enigma_core::{
-    EnigmaMachine,
-    EnigmaState,
-    LinearStepping,
-    Plugboard,
-    Reflector,
-    Rotor,
-};
+use enigma_core::{EnigmaMachine, EnigmaState, LinearStepping, Plugboard, Reflector, Rotor};
 
 #[test]
 fn roundtrip_identity_pipeline() {
     // --- Components ---
     let plugboard = Box::new(Plugboard::identity());
 
-    let rotors: Vec<Box<dyn enigma_core::EnigmaComponent>> = vec![
-        Box::new(Rotor::identity(0)),
-    ];
+    let rotors: Vec<Box<dyn enigma_core::EnigmaComponent>> = vec![Box::new(Rotor::identity(0))];
 
     let reflector = Box::new(Reflector::identity());
 
     let stepping = Box::new(LinearStepping::new(256));
 
     // --- Machine ---
-    let machine = EnigmaMachine::new(
-        plugboard,
-        rotors,
-        reflector,
-        stepping,
-    )
+    let machine = EnigmaMachine::new(plugboard, rotors, reflector, stepping)
         .expect("failed to build EnigmaMachine");
 
     // --- State ---
@@ -54,13 +40,7 @@ fn stepping_advances_state() {
     let reflector = Box::new(Reflector::identity());
     let stepping = Box::new(LinearStepping::new(10));
 
-    let machine = EnigmaMachine::new(
-        plugboard,
-        vec![rotor],
-        reflector,
-        stepping,
-    )
-        .unwrap();
+    let machine = EnigmaMachine::new(plugboard, vec![rotor], reflector, stepping).unwrap();
 
     let mut state = EnigmaState::new(1);
 
@@ -79,13 +59,7 @@ fn invalid_state_is_rejected() {
     let reflector = Box::new(Reflector::identity());
     let stepping = Box::new(LinearStepping::new(256));
 
-    let machine = EnigmaMachine::new(
-        plugboard,
-        vec![rotor],
-        reflector,
-        stepping,
-    )
-        .unwrap();
+    let machine = EnigmaMachine::new(plugboard, vec![rotor], reflector, stepping).unwrap();
 
     // State has zero rotors, machine expects one
     let mut bad_state = EnigmaState::default();
