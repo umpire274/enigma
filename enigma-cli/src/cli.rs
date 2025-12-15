@@ -26,6 +26,14 @@ pub struct CommandOptions {
     #[arg(long, default_value_t = 1)]
     pub rotors: usize,
 
+    /// Rotor mode: identity or shifted
+    #[arg(long, default_value = "identity")]
+    pub rotor_mode: String,
+
+    /// Reflector mode: identity or paired
+    #[arg(long, default_value = "identity")]
+    pub reflector_mode: String,
+
     /// Stepping modulus
     #[arg(long, default_value_t = 256)]
     pub steps: u32,

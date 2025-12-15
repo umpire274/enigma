@@ -12,15 +12,30 @@ pub fn build_machine(
     rotor_count: usize,
     step_modulus: u32,
     swap: Option<String>,
+    rotor_mode: String,
+    reflector_mode: String,
 ) -> EnigmaMachine {
     let plugboard = Box::new(build_plugboard(swap));
 
     let mut rotors: Vec<Box<dyn EnigmaComponent>> = Vec::new();
     for i in 0..rotor_count {
-        rotors.push(Box::new(Rotor::identity(i)));
+        match rotor_mode.as_str() {
+            "identity" => {
+                rotors.push(Box::new(Rotor::identity(i)));
+            }
+            "shifted" => {
+                rotors.push(Box::new(Rotor::shifted(i, 13)));
+            }
+            _ => panic!("unknown rotor mode"),
+        }
     }
 
-    let reflector = Box::new(Reflector::identity());
+     let reflector = match reflector_mode.as_str() {
+         "identity" => Box::new(Reflector::identity()),
+         "paired" => Box::new(Reflector::paired()),
+         _ => panic!("unknown reflector mode"),
+     };
+
     let stepping = Box::new(LinearStepping::new(step_modulus));
 
     EnigmaMachine::new(

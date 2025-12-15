@@ -25,7 +25,10 @@ fn run(opts: CommandOptions) {
         opts.rotors,
         opts.steps,
         opts.swap.clone(),
+        opts.rotor_mode.clone(),
+        opts.reflector_mode.clone(),
     );
+
 
     let mut state = build_state(opts.rotors, opts.seed);
 
