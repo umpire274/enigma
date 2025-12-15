@@ -78,6 +78,28 @@ impl Rotor {
                 ))
             })
     }
+
+    /// Creates a simple non-identity rotor with a fixed shift.
+    ///
+    /// This rotor applies a byte-wise rotation before and after
+    /// the state-based offset.
+    pub fn shifted(index: usize, shift: u8) -> Self {
+        let mut forward = [0u8; 256];
+        let mut backward = [0u8; 256];
+
+        for i in 0..256 {
+            let v = i as u8;
+            let shifted = v.wrapping_add(shift);
+            forward[i] = shifted;
+            backward[shifted as usize] = v;
+        }
+
+        Self {
+            forward,
+            backward,
+            index,
+        }
+    }
 }
 
 impl EnigmaComponent for Rotor {
