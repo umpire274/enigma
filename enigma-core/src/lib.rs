@@ -31,3 +31,11 @@ pub use error::{EnigmaError, EnigmaResult};
 pub use machine::EnigmaMachine;
 pub use state::EnigmaState;
 pub use stepping::SteppingStrategy;
+
+// Concrete components
+pub use plugboard::Plugboard;
+pub use reflector::Reflector;
+pub use rotor::Rotor;
+
+// Stepping strategies
+pub use stepping::LinearStepping;
