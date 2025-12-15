@@ -3,7 +3,7 @@ mod machine;
 mod plugboard;
 
 use clap::Parser;
-use data_encoding::BASE32HEX_NOPAD;
+use data_encoding::{BASE32HEX_NOPAD, HEXUPPER};
 use enigma_core::EnigmaState;
 
 use cli::{Cli, Command, CommandOptions};
@@ -22,16 +22,26 @@ fn build_state(rotors: usize, seed: Option<u64>) -> EnigmaState {
     state
 }
 
-/// Encode ciphertext bytes as Base32 (uppercase letters + digits, no padding)
-fn encode_ciphertext(bytes: &[u8]) -> String {
-    BASE32HEX_NOPAD.encode(bytes)
+/// Encode ciphertext bytes using the selected encoding
+fn encode_ciphertext(bytes: &[u8], encoding: &str) -> String {
+    match encoding {
+        "hex" => HEXUPPER.encode(bytes),
+        "base32" => BASE32HEX_NOPAD.encode(bytes),
+        _ => panic!("unsupported encoding: {}", encoding),
+    }
 }
 
-/// Decode Base32 ciphertext back into raw bytes
-fn decode_ciphertext(s: &str) -> Vec<u8> {
-    BASE32HEX_NOPAD
-        .decode(s.as_bytes())
-        .expect("invalid Base32 ciphertext")
+/// Decode ciphertext string back into raw bytes
+fn decode_ciphertext(s: &str, encoding: &str) -> Vec<u8> {
+    match encoding {
+        "hex" => HEXUPPER
+            .decode(s.as_bytes())
+            .expect("invalid HEX ciphertext"),
+        "base32" => BASE32HEX_NOPAD
+            .decode(s.as_bytes())
+            .expect("invalid Base32 ciphertext"),
+        _ => panic!("unsupported encoding: {}", encoding),
+    }
 }
 
 fn run_encrypt(opts: CommandOptions) {
@@ -54,7 +64,7 @@ fn run_encrypt(opts: CommandOptions) {
         println!("final state: {:?}", state);
     }
 
-    println!("{}", encode_ciphertext(&ciphertext));
+    println!("{}", encode_ciphertext(&ciphertext, &opts.encoding));
 }
 
 fn run_decrypt(opts: CommandOptions) {
@@ -69,7 +79,7 @@ fn run_decrypt(opts: CommandOptions) {
 
     let mut state = build_state(opts.rotors, opts.seed);
 
-    let ciphertext = decode_ciphertext(&opts.input);
+    let ciphertext = decode_ciphertext(&opts.input, &opts.encoding);
 
     let plaintext = machine
         .process_bytes(&ciphertext, &mut state)
