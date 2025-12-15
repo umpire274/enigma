@@ -1,11 +1,12 @@
 mod cli;
 mod machine;
 mod plugboard;
+mod encoding;
 
 use clap::Parser;
-use data_encoding::{BASE32HEX_NOPAD, HEXUPPER};
 use enigma_core::EnigmaState;
 
+use crate::encoding::{decode_ciphertext, encode_ciphertext};
 use cli::{Cli, Command, CommandOptions};
 use machine::build_machine;
 
@@ -20,28 +21,6 @@ fn build_state(rotors: usize, seed: Option<u64>) -> EnigmaState {
     }
 
     state
-}
-
-/// Encode ciphertext bytes using the selected encoding
-fn encode_ciphertext(bytes: &[u8], encoding: &str) -> String {
-    match encoding {
-        "hex" => HEXUPPER.encode(bytes),
-        "base32" => BASE32HEX_NOPAD.encode(bytes),
-        _ => panic!("unsupported encoding: {}", encoding),
-    }
-}
-
-/// Decode ciphertext string back into raw bytes
-fn decode_ciphertext(s: &str, encoding: &str) -> Vec<u8> {
-    match encoding {
-        "hex" => HEXUPPER
-            .decode(s.as_bytes())
-            .expect("invalid HEX ciphertext"),
-        "base32" => BASE32HEX_NOPAD
-            .decode(s.as_bytes())
-            .expect("invalid Base32 ciphertext"),
-        _ => panic!("unsupported encoding: {}", encoding),
-    }
 }
 
 fn run_encrypt(opts: CommandOptions) {
