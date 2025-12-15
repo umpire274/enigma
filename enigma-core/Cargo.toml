@@ -1,0 +1,38 @@
+[package]
+name = "enigma-core"
+version = "0.1.0"
+edition = "2024"
+
+authors = ["Alessandro Maestri <https://github.com/umpire274>"]
+description = "Enigma-inspired transformation pipeline with explicit state and pluggable components"
+license = "MIT"
+
+repository = "https://github.com/umpire274/enigma"
+homepage = "https://github.com/umpire274/enigma"
+documentation = "https://docs.rs/enigma-core"
+
+readme = "README.md"
+
+keywords = ["enigma", "cipher", "pipeline", "crypto", "transformation"]
+categories = ["cryptography", "encoding"]
+
+# Do NOT claim security guarantees
+publish = true
+
+
+[dependencies]
+# No mandatory dependencies for v0.1.0
+# Keep the core minimal and dependency-free
+
+
+[features]
+default = []
+
+# Placeholder for future extensions
+crypto = []
+serde = []
+
+
+[dev-dependencies]
+# Used only for testing and examples
+# (can be extended later)
