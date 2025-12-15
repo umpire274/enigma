@@ -66,7 +66,6 @@ impl Reflector {
 
         Self { mapping }
     }
-
 }
 
 impl EnigmaComponent for Reflector {

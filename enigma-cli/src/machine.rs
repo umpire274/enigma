@@ -1,10 +1,4 @@
-use enigma_core::{
-    EnigmaComponent,
-    EnigmaMachine,
-    LinearStepping,
-    Reflector,
-    Rotor,
-};
+use enigma_core::{EnigmaComponent, EnigmaMachine, LinearStepping, Reflector, Rotor};
 
 use crate::plugboard::build_plugboard;
 
@@ -15,8 +9,7 @@ pub fn build_machine(
     rotor_mode: String,
     reflector_mode: String,
     seed: Option<u64>,
-) -> EnigmaMachine
-{
+) -> EnigmaMachine {
     let plugboard = Box::new(build_plugboard(swap));
 
     let mut rotors: Vec<Box<dyn EnigmaComponent>> = Vec::new();
@@ -36,19 +29,14 @@ pub fn build_machine(
         }
     }
 
-     let reflector = match reflector_mode.as_str() {
-         "identity" => Box::new(Reflector::identity()),
-         "paired" => Box::new(Reflector::paired()),
-         _ => panic!("unknown reflector mode"),
-     };
+    let reflector = match reflector_mode.as_str() {
+        "identity" => Box::new(Reflector::identity()),
+        "paired" => Box::new(Reflector::paired()),
+        _ => panic!("unknown reflector mode"),
+    };
 
     let stepping = Box::new(LinearStepping::new(step_modulus));
 
-    EnigmaMachine::new(
-        plugboard,
-        rotors,
-        reflector,
-        stepping,
-    )
+    EnigmaMachine::new(plugboard, rotors, reflector, stepping)
         .expect("invalid Enigma configuration")
 }

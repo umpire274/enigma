@@ -8,7 +8,7 @@
 ///
 /// The state is intentionally kept simple and explicit to guarantee
 /// deterministic behavior and ease of testing.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct EnigmaState {
     /// Current positions of the rotors.
     ///
@@ -38,14 +38,5 @@ impl EnigmaState {
             *pos = 0;
         }
         self.step_counter = 0;
-    }
-}
-
-impl Default for EnigmaState {
-    fn default() -> Self {
-        Self {
-            rotor_positions: Vec::new(),
-            step_counter: 0,
-        }
     }
 }

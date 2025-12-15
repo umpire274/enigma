@@ -57,6 +57,4 @@ pub struct CommandOptions {
     /// Output encoding: base32, hex, or base64
     #[arg(long, default_value = "base32")]
     pub encoding: String,
-
-
 }

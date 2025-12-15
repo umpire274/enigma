@@ -2,8 +2,8 @@ use enigma_core::Plugboard;
 
 pub fn build_plugboard(swap: Option<String>) -> Plugboard {
     let mut mapping = [0u8; 256];
-    for i in 0..256 {
-        mapping[i] = i as u8;
+    for (i, item) in mapping.iter_mut().enumerate() {
+        *item = i as u8;
     }
 
     if let Some(s) = swap {

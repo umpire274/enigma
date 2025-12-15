@@ -1,7 +1,7 @@
 mod cli;
+mod encoding;
 mod machine;
 mod plugboard;
-mod encoding;
 
 use clap::Parser;
 use enigma_core::EnigmaState;
@@ -43,8 +43,7 @@ fn run_encrypt(opts: CommandOptions) {
             println!("[{}] '{}' ({})", i, b as char, b);
             println!(
                 "  state before: pos={:?}, step={}",
-                state.rotor_positions,
-                state.step_counter
+                state.rotor_positions, state.step_counter
             );
 
             let out = machine
@@ -54,8 +53,7 @@ fn run_encrypt(opts: CommandOptions) {
             println!("  output byte: {}", out);
             println!(
                 "  state after:  pos={:?}, step={}",
-                state.rotor_positions,
-                state.step_counter
+                state.rotor_positions, state.step_counter
             );
             println!();
 
@@ -90,8 +88,7 @@ fn run_decrypt(opts: CommandOptions) {
             println!("[{}] byte {}", i, b);
             println!(
                 "  state before: pos={:?}, step={}",
-                state.rotor_positions,
-                state.step_counter
+                state.rotor_positions, state.step_counter
             );
 
             let out = machine
@@ -101,8 +98,7 @@ fn run_decrypt(opts: CommandOptions) {
             println!("  output char: '{}' ({})", out as char, out);
             println!(
                 "  state after:  pos={:?}, step={}",
-                state.rotor_positions,
-                state.step_counter
+                state.rotor_positions, state.step_counter
             );
             println!();
 

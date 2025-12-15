@@ -1,5 +1,5 @@
-use data_encoding::{BASE32HEX_NOPAD, HEXUPPER};
 use data_encoding::BASE64_NOPAD;
+use data_encoding::{BASE32HEX_NOPAD, HEXUPPER};
 
 pub fn encode_ciphertext(bytes: &[u8], encoding: &str) -> String {
     match encoding {

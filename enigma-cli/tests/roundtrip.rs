@@ -6,11 +6,16 @@ fn encrypt_then_decrypt(input: &str, encoding: &str) -> String {
         .args([
             "encrypt",
             input,
-            "--rotors", "3",
-            "--seed", "12345",
-            "--rotor-mode", "seed",
-            "--reflector-mode", "paired",
-            "--encoding", encoding,
+            "--rotors",
+            "3",
+            "--seed",
+            "12345",
+            "--rotor-mode",
+            "seed",
+            "--reflector-mode",
+            "paired",
+            "--encoding",
+            encoding,
         ])
         .assert()
         .success()
@@ -18,20 +23,23 @@ fn encrypt_then_decrypt(input: &str, encoding: &str) -> String {
         .stdout
         .clone();
 
-    let ciphertext = String::from_utf8_lossy(&encrypt_output)
-        .trim()
-        .to_string();
+    let ciphertext = String::from_utf8_lossy(&encrypt_output).trim().to_string();
 
     // Decrypt
     let decrypt_output = cargo_bin_cmd!("enigma-cli")
         .args([
             "decrypt",
             &ciphertext,
-            "--rotors", "3",
-            "--seed", "12345",
-            "--rotor-mode", "seed",
-            "--reflector-mode", "paired",
-            "--encoding", encoding,
+            "--rotors",
+            "3",
+            "--seed",
+            "12345",
+            "--rotor-mode",
+            "seed",
+            "--reflector-mode",
+            "paired",
+            "--encoding",
+            encoding,
         ])
         .assert()
         .success()
@@ -39,9 +47,7 @@ fn encrypt_then_decrypt(input: &str, encoding: &str) -> String {
         .stdout
         .clone();
 
-    String::from_utf8_lossy(&decrypt_output)
-        .trim()
-        .to_string()
+    String::from_utf8_lossy(&decrypt_output).trim().to_string()
 }
 
 #[test]

@@ -33,10 +33,7 @@ impl Rotor {
     /// Creates a new `Rotor` from a permutation table and a rotor index.
     ///
     /// The permutation must be bijective.
-    pub fn new(
-        permutation: [u8; 256],
-        index: usize,
-    ) -> EnigmaResult<Self> {
+    pub fn new(permutation: [u8; 256], index: usize) -> EnigmaResult<Self> {
         let mut backward = [0u8; 256];
         let mut seen = [false; 256];
 
@@ -72,16 +69,13 @@ impl Rotor {
         }
     }
 
-    fn position<'a>(&self, state: &'a EnigmaState) -> Result<u32, EnigmaError> {
+    fn position(&self, state: &EnigmaState) -> Result<u32, EnigmaError> {
         state
             .rotor_positions
             .get(self.index)
             .copied()
             .ok_or_else(|| {
-                EnigmaError::InvalidState(format!(
-                    "rotor index {} out of bounds",
-                    self.index
-                ))
+                EnigmaError::InvalidState(format!("rotor index {} out of bounds", self.index))
             })
     }
 
@@ -93,11 +87,10 @@ impl Rotor {
         let mut forward = [0u8; 256];
         let mut backward = [0u8; 256];
 
-        for i in 0..256 {
-            let v = i as u8;
-            let shifted = v.wrapping_add(shift);
-            forward[i] = shifted;
-            backward[shifted as usize] = v;
+        for (i, v) in forward.iter_mut().enumerate() {
+            let shifted = (i as u8).wrapping_add(shift);
+            *v = shifted;
+            backward[shifted as usize] = i as u8;
         }
 
         Self {
@@ -119,13 +112,12 @@ impl Rotor {
         let mut backward = [0u8; 256];
 
         // Initial identity mapping
-        for i in 0..256 {
-            forward[i] = i as u8;
+        for (i, v) in forward.iter_mut().enumerate() {
+            *v = i as u8;
         }
 
         // Derive a deterministic PRNG state
-        let mut rng = (seed as u32)
-            .wrapping_add((index as u32).wrapping_mul(0x9E3779B9));
+        let mut rng = (seed as u32).wrapping_add((index as u32).wrapping_mul(0x9E3779B9));
 
         // Fisher–Yates shuffle
         for i in (1..256).rev() {
@@ -144,7 +136,6 @@ impl Rotor {
             index,
         }
     }
-
 }
 
 impl EnigmaComponent for Rotor {
