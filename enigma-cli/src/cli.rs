@@ -41,4 +41,9 @@ pub struct CommandOptions {
     /// Verbose output
     #[arg(long)]
     pub verbose: bool,
+
+    /// Trace each byte through the Enigma pipeline
+    #[arg(long)]
+    pub trace: bool,
+
 }

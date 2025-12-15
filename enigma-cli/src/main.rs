@@ -29,15 +29,47 @@ fn run(opts: CommandOptions) {
 
     let mut state = build_state(opts.rotors, opts.seed);
 
-    let output = machine
-        .process_bytes(opts.input.as_bytes(), &mut state)
-        .expect("processing failed");
+    let mut output = Vec::with_capacity(opts.input.len());
 
-    if opts.verbose {
-        println!("state: {:?}", state);
+    for (idx, &byte) in opts.input.as_bytes().iter().enumerate() {
+        if opts.trace {
+            println!(
+                "[{}] '{}' ({})",
+                idx,
+                byte as char,
+                byte
+            );
+            println!(
+                "  state before: pos={:?}, step={}",
+                state.rotor_positions,
+                state.step_counter
+            );
+        }
+
+        let out = machine
+            .process_byte(byte, &mut state)
+            .expect("processing failed");
+
+        if opts.trace {
+            println!(
+                "  output: '{}' ({})",
+                out as char,
+                out
+            );
+            println!(
+                "  state after:  pos={:?}, step={}",
+                state.rotor_positions,
+                state.step_counter
+            );
+            println!();
+        }
+
+        output.push(out);
     }
 
-    println!("{}", String::from_utf8_lossy(&output));
+    if !opts.trace {
+        println!("{}", String::from_utf8_lossy(&output));
+    }
 }
 
 fn main() {
