@@ -14,7 +14,9 @@ pub fn build_machine(
     swap: Option<String>,
     rotor_mode: String,
     reflector_mode: String,
-) -> EnigmaMachine {
+    seed: Option<u64>,
+) -> EnigmaMachine
+{
     let plugboard = Box::new(build_plugboard(swap));
 
     let mut rotors: Vec<Box<dyn EnigmaComponent>> = Vec::new();
@@ -25,6 +27,10 @@ pub fn build_machine(
             }
             "shifted" => {
                 rotors.push(Box::new(Rotor::shifted(i, 13)));
+            }
+            "seed" => {
+                let seed = seed.expect("seed-based rotor requires --seed");
+                rotors.push(Box::new(Rotor::from_seed(i, seed)));
             }
             _ => panic!("unknown rotor mode"),
         }

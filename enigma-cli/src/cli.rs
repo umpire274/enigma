@@ -26,7 +26,7 @@ pub struct CommandOptions {
     #[arg(long, default_value_t = 1)]
     pub rotors: usize,
 
-    /// Rotor mode: identity or shifted
+    /// Rotor mode: identity | shifted | seed
     #[arg(long, default_value = "identity")]
     pub rotor_mode: String,
 
