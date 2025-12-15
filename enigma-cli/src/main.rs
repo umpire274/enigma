@@ -1,10 +1,12 @@
 mod cli;
 mod machine;
 mod plugboard;
+mod alphabet;
 
 use clap::Parser;
 use enigma_core::EnigmaState;
 
+use alphabet::{char_to_symbol, symbol_to_char};
 use cli::{Cli, Command, CommandOptions};
 use machine::build_machine;
 
@@ -35,12 +37,16 @@ fn run(opts: CommandOptions) {
     let mut output = Vec::with_capacity(opts.input.len());
 
     for (idx, &byte) in opts.input.as_bytes().iter().enumerate() {
+        let Some(symbol) = char_to_symbol(byte) else {
+            continue; // ignora caratteri non validi
+        };
+
         if opts.trace {
             println!(
-                "[{}] '{}' ({})",
+                "[{}] '{}' -> {}",
                 idx,
                 byte as char,
-                byte
+                symbol
             );
             println!(
                 "  state before: pos={:?}, step={}",
@@ -49,15 +55,17 @@ fn run(opts: CommandOptions) {
             );
         }
 
-        let out = machine
-            .process_byte(byte, &mut state)
+        let encrypted = machine
+            .process_byte(symbol, &mut state)
             .expect("processing failed");
+
+        let output_char = symbol_to_char(encrypted);
 
         if opts.trace {
             println!(
                 "  output: '{}' ({})",
-                out as char,
-                out
+                output_char as char,
+                encrypted
             );
             println!(
                 "  state after:  pos={:?}, step={}",
@@ -67,7 +75,7 @@ fn run(opts: CommandOptions) {
             println!();
         }
 
-        output.push(out);
+        output.push(output_char);
     }
 
     if !opts.trace {
