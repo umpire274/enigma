@@ -34,13 +34,37 @@ fn run_encrypt(opts: CommandOptions) {
     );
 
     let mut state = build_state(opts.rotors, opts.seed);
+    let input = opts.input.as_bytes();
 
-    let ciphertext = machine
-        .process_bytes(opts.input.as_bytes(), &mut state)
-        .expect("encryption failed");
+    let mut ciphertext = Vec::with_capacity(input.len());
 
     if opts.trace {
-        println!("final state: {:?}", state);
+        for (i, &b) in input.iter().enumerate() {
+            println!("[{}] '{}' ({})", i, b as char, b);
+            println!(
+                "  state before: pos={:?}, step={}",
+                state.rotor_positions,
+                state.step_counter
+            );
+
+            let out = machine
+                .process_byte(b, &mut state)
+                .expect("encryption failed");
+
+            println!("  output byte: {}", out);
+            println!(
+                "  state after:  pos={:?}, step={}",
+                state.rotor_positions,
+                state.step_counter
+            );
+            println!();
+
+            ciphertext.push(out);
+        }
+    } else {
+        ciphertext = machine
+            .process_bytes(input, &mut state)
+            .expect("encryption failed");
     }
 
     println!("{}", encode_ciphertext(&ciphertext, &opts.encoding));
@@ -57,15 +81,37 @@ fn run_decrypt(opts: CommandOptions) {
     );
 
     let mut state = build_state(opts.rotors, opts.seed);
-
     let ciphertext = decode_ciphertext(&opts.input, &opts.encoding);
 
-    let plaintext = machine
-        .process_bytes(&ciphertext, &mut state)
-        .expect("decryption failed");
+    let mut plaintext = Vec::with_capacity(ciphertext.len());
 
     if opts.trace {
-        println!("final state: {:?}", state);
+        for (i, &b) in ciphertext.iter().enumerate() {
+            println!("[{}] byte {}", i, b);
+            println!(
+                "  state before: pos={:?}, step={}",
+                state.rotor_positions,
+                state.step_counter
+            );
+
+            let out = machine
+                .process_byte(b, &mut state)
+                .expect("decryption failed");
+
+            println!("  output char: '{}' ({})", out as char, out);
+            println!(
+                "  state after:  pos={:?}, step={}",
+                state.rotor_positions,
+                state.step_counter
+            );
+            println!();
+
+            plaintext.push(out);
+        }
+    } else {
+        plaintext = machine
+            .process_bytes(&ciphertext, &mut state)
+            .expect("decryption failed");
     }
 
     println!("{}", String::from_utf8_lossy(&plaintext));
