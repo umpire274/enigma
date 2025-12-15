@@ -11,3 +11,6 @@ repository = "https://github.com/umpire274/enigma"
 enigma-core = { path = "../enigma-core" }
 clap = { version = "4.5", features = ["derive"] }
 data-encoding = "2.6"
+
+[dev-dependencies]
+assert_cmd = "2.0"
