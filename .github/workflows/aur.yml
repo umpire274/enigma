@@ -67,17 +67,17 @@ jobs:
           }
           EOF
 
-      - name: Generate .SRCINFO
+      - name: Generate SRCINFO
         shell: bash
         run: |
           set -euo pipefail
           WORKDIR="$GITHUB_WORKSPACE/aur/rotorix-bin"
           chown -R builder:builder "$WORKDIR"
-          su - builder -c "cd '$WORKDIR' && makepkg --printsrcinfo --nodeps > .SRCINFO"
+          su - builder -c "cd '$WORKDIR' && makepkg --printsrcinfo --nodeps > SRCINFO.txt"
           ls -lah "$WORKDIR"
 
-      - name: Upload .SRCINFO artifact
+      - name: Upload SRCINFO artifact
         uses: actions/upload-artifact@v4
         with:
           name: rotorix-bin-srcinfo
-          path: aur/rotorix-bin/.SRCINFO
+          path: aur/rotorix-bin/SRCINFO.txt
