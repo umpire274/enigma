@@ -33,7 +33,7 @@ jobs:
             mkdir -p aur/rotorix-bin
             cd aur/rotorix-bin
 
-            cat > PKGBUILD << 'EOF'
+            cat > PKGBUILD << '\''EOF'\''
 pkgname=rotorix-bin
 pkgver=0.1.0
 pkgrel=1
@@ -61,7 +61,7 @@ package() {
 EOF
   
             makepkg --printsrcinfo > .SRCINFO
-            "
+          "
 
       - name: Upload .SRCINFO artifact
         uses: actions/upload-artifact@v4
