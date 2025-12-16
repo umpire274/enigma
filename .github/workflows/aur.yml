@@ -3,9 +3,6 @@ name: AUR packaging
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   aur:
     runs-on: ubuntu-latest
@@ -18,50 +15,59 @@ jobs:
 
       - name: Init pacman
         run: |
-          pacman -Sy --noconfirm
-          pacman -S --noconfirm git
+          set -euxo pipefail
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed git sudo base-devel fakeroot binutils
 
       - name: Prepare build user
         run: |
+          set -euxo pipefail
           useradd -m builder
           passwd -d builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-      - name: Build PKGBUILD and generate .SRCINFO
+      - name: Write PKGBUILD
+        shell: bash
         run: |
-          su - builder -c "
-            mkdir -p aur/rotorix-bin
-            cd aur/rotorix-bin
+          set -euxo pipefail
 
-            cat > PKGBUILD << '\''EOF'\''
+          mkdir -p aur/rotorix-bin
+
+          cat > aur/rotorix-bin/PKGBUILD <<'EOF'
 pkgname=rotorix-bin
 pkgver=0.1.0
 pkgrel=1
-pkgdesc='Rotor-based encryption CLI inspired by the Enigma machine'
-arch=('x86_64')
-url='https://github.com/umpire274/rotorix'
-license=('MIT')
-provides=('rotorix')
-conflicts=('rotorix')
+pkgdesc="Rotor-based encryption CLI inspired by the Enigma machine"
+arch=("x86_64")
+url="https://github.com/umpire274/rotorix"
+license=("MIT")
+provides=("rotorix")
+conflicts=("rotorix")
 
 source=(
-  \"rotorix-\${pkgver}-x86_64-unknown-linux-gnu.tar.gz::https://github.com/umpire274/rotorix/releases/download/rotorix-v\${pkgver}/rotorix-\${pkgver}-x86_64-unknown-linux-gnu.tar.gz\"
+  "rotorix-${pkgver}-x86_64-unknown-linux-gnu.tar.gz::https://github.com/umpire274/rotorix/releases/download/rotorix-v${pkgver}/rotorix-${pkgver}-x86_64-unknown-linux-gnu.tar.gz"
 )
 
 sha256sums=(
-  'd833202a2d8e82ffe61b7780049f3e17551f0a3a78bc0388da274f32bf1efeea'
+  "d833202a2d8e82ffe61b7780049f3e17551f0a3a78bc0388da274f32bf1efeea"
 )
 
 package() {
-  install -Dm755 rotorix \"\${pkgdir}/usr/bin/rotorix\"
-  install -Dm644 README.md \"\${pkgdir}/usr/share/doc/rotorix/README.md\"
-  install -Dm644 CHANGELOG.md \"\${pkgdir}/usr/share/doc/rotorix/CHANGELOG.md\"
-  install -Dm644 LICENSE \"\${pkgdir}/usr/share/licenses/rotorix/LICENSE\"
+  tar xf "rotorix-${pkgver}-x86_64-unknown-linux-gnu.tar.gz"
+  cd "rotorix-${pkgver}-x86_64-unknown-linux-gnu"
+
+  install -Dm755 rotorix "${pkgdir}/usr/bin/rotorix"
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/rotorix/README.md"
+  install -Dm644 CHANGELOG.md "${pkgdir}/usr/share/doc/rotorix/CHANGELOG.md"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/rotorix/LICENSE"
 }
 EOF
-  
-            makepkg --printsrcinfo > .SRCINFO
-          "
+
+      - name: Generate .SRCINFO
+        run: |
+          set -euxo pipefail
+          chown -R builder:builder aur
+          su - builder -c "cd aur/rotorix-bin && makepkg --printsrcinfo > .SRCINFO"
 
       - name: Upload .SRCINFO artifact
         uses: actions/upload-artifact@v4
