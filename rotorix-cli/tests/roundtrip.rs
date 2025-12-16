@@ -2,7 +2,7 @@ use assert_cmd::cargo::cargo_bin_cmd;
 
 fn encrypt_then_decrypt(input: &str, encoding: &str) -> String {
     // Encrypt
-    let encrypt_output = cargo_bin_cmd!("enigma-cli")
+    let encrypt_output = cargo_bin_cmd!("rotorix-cli")
         .args([
             "encrypt",
             input,
@@ -26,7 +26,7 @@ fn encrypt_then_decrypt(input: &str, encoding: &str) -> String {
     let ciphertext = String::from_utf8_lossy(&encrypt_output).trim().to_string();
 
     // Decrypt
-    let decrypt_output = cargo_bin_cmd!("enigma-cli")
+    let decrypt_output = cargo_bin_cmd!("rotorix-cli")
         .args([
             "decrypt",
             &ciphertext,

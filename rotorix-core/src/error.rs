@@ -1,8 +1,8 @@
-//! Error types for the enigma-core crate.
+//! Error types for the rotorix-core crate.
 
 use std::fmt;
 
-/// Result type used throughout the enigma-core crate.
+/// Result type used throughout the rotorix-core crate.
 pub type EnigmaResult<T> = Result<T, EnigmaError>;
 
 /// Errors that can occur while building or running an Enigma machine.

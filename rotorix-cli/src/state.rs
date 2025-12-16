@@ -1,4 +1,4 @@
-use enigma_core::EnigmaState;
+use rotorix_core::EnigmaState;
 
 pub fn build_state(rotors: usize, seed: Option<u64>) -> EnigmaState {
     let mut state = EnigmaState::new(rotors);

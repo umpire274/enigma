@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-12-15
 
 ### Added
-- Initial release of the **enigma-core** library.
+- Initial release of the **rotorix-core** library.
 - Enigma-inspired transformation pipeline with explicit state management.
 - Core components:
     - Plugboard (involutive byte permutation).

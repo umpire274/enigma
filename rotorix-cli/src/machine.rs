@@ -1,4 +1,4 @@
-use enigma_core::{EnigmaComponent, EnigmaMachine, LinearStepping, Reflector, Rotor};
+use rotorix_core::{EnigmaComponent, EnigmaMachine, LinearStepping, Reflector, Rotor};
 
 use crate::plugboard::build_plugboard;
 

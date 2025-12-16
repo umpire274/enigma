@@ -1,8 +1,8 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "enigma-cli")]
-#[command(about = "Demo CLI for the enigma-core library")]
+#[command(name = "rotorix-cli")]
+#[command(about = "Demo CLI for the rotorix-core library")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,

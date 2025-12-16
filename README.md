@@ -1,22 +1,22 @@
-# Enigma
+# Rotorix
 
-**Enigma** is an experimental Rust project inspired by the architecture of the historical Enigma machine, reimagined as
+**Rotorix** is an experimental Rust project inspired by the architecture of the historical Rotorix machine, reimagined as
 a modern, modular transformation pipeline.
 
-The goal of this project is **not** to recreate Enigma as a cryptographically secure system, but to explore how its
+The goal of this project is **not** to recreate Rotorix as a cryptographically secure system, but to explore how its
 conceptual structure — plugboard, rotors, reflector, and stepping — can be modeled, extended, and reused with modern
 software design principles.
 
-This repository serves as the **main container** for the Enigma ecosystem.
+This repository serves as the **main container** for the Rotorix ecosystem.
 
 ---
 
 ## Project Philosophy
 
-Enigma is built around a few core ideas:
+Rotorix is built around a few core ideas:
 
 - **Architecture over algorithms**  
-  Enigma is treated as a *pipeline* of transformations, not as a cipher to be made “secure”.
+  Rotorix is treated as a *pipeline* of transformations, not as a cipher to be made “secure”.
 
 - **Separation of concerns**  
   The core logic is completely independent of networking, user interfaces, or transport protocols.
@@ -27,7 +27,7 @@ Enigma is built around a few core ideas:
 - **Extensibility**  
   Historical components and modern crypto-based transformations can coexist.
 
-This makes Enigma suitable for:
+This makes Rotorix suitable for:
 
 - educational purposes
 - cryptographic experimentation
@@ -39,15 +39,15 @@ This makes Enigma suitable for:
 ## Repository Structure
 
 ```text
-enigma/
-├── enigma-core/     # Core Enigma transformation library
+rotorix/
+├── rotorix-core/     # Core Rotorix transformation library
 ├── README.md        # This file
 └── (future crates)
 ```
 
-### `enigma-core`
+### `rotorix-core`
 
-The `enigma-core` crate contains the core Enigma-inspired engine:
+The `rotorix-core` crate contains the core Rotorix-inspired engine:
 
 - plugboard
 - rotors
@@ -78,7 +78,7 @@ Breaking changes are expected until `1.0.0`.
 
 ## Non-Goals
 
-To avoid ambiguity, Enigma explicitly does **not** aim to be:
+To avoid ambiguity, Rotorix explicitly does **not** aim to be:
 
 - a secure messaging system
 - a replacement for modern cryptographic protocols
