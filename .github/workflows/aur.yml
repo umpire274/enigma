@@ -73,7 +73,8 @@ jobs:
           set -euo pipefail
           WORKDIR="$GITHUB_WORKSPACE/aur/rotorix-bin"
           chown -R builder:builder "$WORKDIR"
-          su - builder -c "cd '$WORKDIR' && makepkg --printsrcinfo > .SRCINFO"
+          su - builder -c "cd '$WORKDIR' && makepkg --printsrcinfo --nodeps > .SRCINFO"
+          ls -lah "$WORKDIR"
 
       - name: Upload .SRCINFO artifact
         uses: actions/upload-artifact@v4
