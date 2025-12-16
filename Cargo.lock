@@ -137,20 +137,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
 
 [[package]]
-name = "enigma-cli"
-version = "0.1.0"
-dependencies = [
- "assert_cmd",
- "clap",
- "data-encoding",
- "enigma-core",
-]
-
-[[package]]
-name = "enigma-core"
-version = "0.1.0"
-
-[[package]]
 name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -230,6 +216,20 @@ name = "regex-automata"
 version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5276caf25ac86c8d810222b3dbb938e512c55c6831a10f3e6ed1c93b84041f1c"
+
+[[package]]
+name = "rotorix-cli"
+version = "0.1.0"
+dependencies = [
+ "assert_cmd",
+ "clap",
+ "data-encoding",
+ "rotorix-core",
+]
+
+[[package]]
+name = "rotorix-core"
+version = "0.1.0"
 
 [[package]]
 name = "serde"

@@ -4,7 +4,7 @@ mod machine;
 mod plugboard;
 
 use clap::Parser;
-use enigma_core::EnigmaState;
+use rotorix_core::EnigmaState;
 
 use crate::encoding::{decode_ciphertext, encode_ciphertext};
 use cli::{Cli, Command, CommandOptions};

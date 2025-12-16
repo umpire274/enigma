@@ -1,11 +1,11 @@
-use enigma_core::{EnigmaMachine, EnigmaState, LinearStepping, Plugboard, Reflector, Rotor};
+use rotorix_core::{EnigmaMachine, EnigmaState, LinearStepping, Plugboard, Reflector, Rotor};
 
 #[test]
 fn roundtrip_identity_pipeline() {
     // --- Components ---
     let plugboard = Box::new(Plugboard::identity());
 
-    let rotors: Vec<Box<dyn enigma_core::EnigmaComponent>> = vec![Box::new(Rotor::identity(0))];
+    let rotors: Vec<Box<dyn rotorix_core::EnigmaComponent>> = vec![Box::new(Rotor::identity(0))];
 
     let reflector = Box::new(Reflector::identity());
 

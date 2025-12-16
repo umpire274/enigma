@@ -1,5 +1,5 @@
 [package]
-name = "enigma-core"
+name = "rotorix-core"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,13 +7,13 @@ authors = ["Alessandro Maestri <https://github.com/umpire274>"]
 description = "Enigma-inspired transformation pipeline with explicit state and pluggable components"
 license = "MIT"
 
-repository = "https://github.com/umpire274/enigma"
-homepage = "https://github.com/umpire274/enigma"
-documentation = "https://docs.rs/enigma-core"
+repository = "https://github.com/umpire274/rotorix"
+homepage = "https://github.com/umpire274/rotorix"
+documentation = "https://docs.rs/rotorix-core"
 
 readme = "README.md"
 
-keywords = ["enigma", "cipher", "pipeline", "crypto", "transformation"]
+keywords = ["rotorix", "cipher", "pipeline", "crypto", "transformation"]
 categories = ["cryptography", "encoding"]
 
 # Do NOT claim security guarantees

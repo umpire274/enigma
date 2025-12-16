@@ -1,4 +1,4 @@
-use enigma_core::Plugboard;
+use rotorix_core::Plugboard;
 
 pub fn build_plugboard(swap: Option<String>) -> Plugboard {
     let mut mapping = [0u8; 256];

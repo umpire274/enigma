@@ -1,6 +1,6 @@
-# enigma-core
+# rotorix-core
 
-`enigma-core` is a Rust library that implements an **Enigma-inspired transformation engine**, modeled as a modular and
+`rotorix-core` is a Rust library that implements an **Enigma-inspired transformation engine**, modeled as a modular and
 deterministic pipeline.
 
 It reinterprets the conceptual architecture of the historical Enigma machine — *plugboard, rotors, reflector, and
@@ -10,7 +10,7 @@ stepping* — using modern software design principles, without making claims abo
 
 ## Design Goals
 
-The primary goals of `enigma-core` are:
+The primary goals of `rotorix-core` are:
 
 - **Architectural clarity**  
   Enigma is treated as a transformation *pipeline*, not as a cipher to be “fixed” or hardened.
@@ -29,7 +29,7 @@ The primary goals of `enigma-core` are:
 
 ---
 
-## What `enigma-core` Is
+## What `rotorix-core` Is
 
 - A reusable Rust **library**
 - A framework for **Enigma-like pipelines**
@@ -41,9 +41,9 @@ The primary goals of `enigma-core` are:
 
 ---
 
-## What `enigma-core` Is Not
+## What `rotorix-core` Is Not
 
-To avoid confusion, `enigma-core` is **not**:
+To avoid confusion, `rotorix-core` is **not**:
 
 - a secure encryption library
 - a messaging protocol
@@ -104,7 +104,7 @@ Examples include:
 
 ## Versioning and Stability
 
-`enigma-core` follows **Semantic Versioning**.
+`rotorix-core` follows **Semantic Versioning**.
 
 - Versions `< 1.0.0` are considered **unstable**
 - Breaking changes may occur between minor versions
