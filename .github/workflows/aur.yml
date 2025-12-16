@@ -3,6 +3,9 @@ name: AUR packaging
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  
 jobs:
   aur:
     runs-on: ubuntu-latest
