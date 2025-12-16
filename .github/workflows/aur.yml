@@ -1,0 +1,76 @@
+name: AUR packaging
+
+on:
+  workflow_dispatch:
+
+jobs:
+  aur:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Init pacman
+        run: |
+          set -euxo pipefail
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed git sudo base-devel fakeroot binutils
+
+      - name: Prepare build user
+        run: |
+          set -euxo pipefail
+          useradd -m builder
+          passwd -d builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+      - name: Write PKGBUILD
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          mkdir -p aur/rotorix-bin
+
+          cat > aur/rotorix-bin/PKGBUILD <<'EOF'
+          pkgname=rotorix-bin
+          pkgver=0.1.0
+          pkgrel=1
+          pkgdesc="Rotor-based encryption CLI inspired by the Enigma machine"
+          arch=("x86_64")
+          url="https://github.com/umpire274/rotorix"
+          license=("MIT")
+          provides=("rotorix")
+          conflicts=("rotorix")
+
+          source=(
+            "rotorix-${pkgver}-x86_64-unknown-linux-gnu.tar.gz::https://github.com/umpire274/rotorix/releases/download/rotorix-v${pkgver}/rotorix-${pkgver}-x86_64-unknown-linux-gnu.tar.gz"
+          )
+
+          sha256sums=(
+            "d833202a2d8e82ffe61b7780049f3e17551f0a3a78bc0388da274f32bf1efeea"
+          )
+
+          package() {
+            tar xf "rotorix-${pkgver}-x86_64-unknown-linux-gnu.tar.gz"
+            cd "rotorix-${pkgver}-x86_64-unknown-linux-gnu"
+
+            install -Dm755 rotorix "${pkgdir}/usr/bin/rotorix"
+            install -Dm644 README.md "${pkgdir}/usr/share/doc/rotorix/README.md"
+            install -Dm644 CHANGELOG.md "${pkgdir}/usr/share/doc/rotorix/CHANGELOG.md"
+            install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/rotorix/LICENSE"
+          }
+          EOF
+
+      - name: Generate .SRCINFO
+        run: |
+          set -euxo pipefail
+          chown -R builder:builder aur
+          su - builder -c "cd aur/rotorix-bin && makepkg --printsrcinfo > .SRCINFO"
+
+      - name: Upload .SRCINFO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rotorix-bin-srcinfo
+          path: aur/rotorix-bin/.SRCINFO

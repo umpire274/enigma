@@ -13,12 +13,18 @@ documentation = "https://docs.rs/rotorix-core"
 
 readme = "README.md"
 
-keywords = ["rotorix", "cipher", "pipeline", "crypto", "transformation"]
+keywords = ["enigma", "cipher", "pipeline", "crypto", "transformation"]
 categories = ["cryptography", "encoding"]
 
 # Do NOT claim security guarantees
 publish = true
 
+include = [
+    "src/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
 
 [dependencies]
 # No mandatory dependencies for v0.1.0
