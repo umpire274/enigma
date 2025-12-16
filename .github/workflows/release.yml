@@ -46,20 +46,40 @@ jobs:
       - name: Prepare artifact
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
-          VERSION=${GITHUB_REF#refs/tags/}
-          BIN_NAME=rotorix
+          VERSION="${GITHUB_REF#refs/tags/}"
+          BIN_NAME="rotorix"
+          TARGET="${{ matrix.target }}"
+          TARGET_DIR="target/$TARGET/release"
+          DIST_DIR="dist"
 
-          TARGET_DIR=target/${{ matrix.target }}/release
-          mkdir -p dist
+          mkdir -p "$DIST_DIR"
 
-          if [[ "${{ matrix.archive }}" == "zip" ]]; then
-            cp "$TARGET_DIR/$BIN_NAME.exe" .
-            zip "dist/${BIN_NAME}-${VERSION}-${{ matrix.target }}.zip" "$BIN_NAME.exe"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            BIN_PATH="$TARGET_DIR/$BIN_NAME.exe"
+            if [[ ! -f "$BIN_PATH" ]]; then
+              echo "❌ Binary not found: $BIN_PATH"
+              ls -lah "$TARGET_DIR"
+              exit 1
+            fi
+
+            cp "$BIN_PATH" "$DIST_DIR/"
+
+            powershell -Command \
+              "Compress-Archive -Path '$DIST_DIR\\$BIN_NAME.exe' -DestinationPath '$DIST_DIR\\$BIN_NAME-$VERSION-$TARGET.zip'"
+
           else
-            cp "$TARGET_DIR/$BIN_NAME" .
-            tar czf "dist/${BIN_NAME}-${VERSION}-${{ matrix.target }}.tar.gz" "$BIN_NAME"
+            BIN_PATH="$TARGET_DIR/$BIN_NAME"
+            if [[ ! -f "$BIN_PATH" ]]; then
+              echo "❌ Binary not found: $BIN_PATH"
+              ls -lah "$TARGET_DIR"
+              exit 1
+            fi
+
+            cp "$BIN_PATH" "$DIST_DIR/"
+
+            tar czf "$DIST_DIR/$BIN_NAME-$VERSION-$TARGET.tar.gz" -C "$DIST_DIR" "$BIN_NAME"
           fi
 
       - name: Upload artifact
