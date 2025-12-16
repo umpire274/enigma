@@ -34,9 +34,10 @@ jobs:
         run: |
           set -euxo pipefail
 
-          mkdir -p aur/rotorix-bin
+          WORKDIR="$GITHUB_WORKSPACE/aur/rotorix-bin"
+          mkdir -p "$WORKDIR"
 
-          cat > aur/rotorix-bin/PKGBUILD <<'EOF'
+          cat > "$WORKDIR/PKGBUILD" <<'EOF'
           pkgname=rotorix-bin
           pkgver=0.1.0
           pkgrel=1
@@ -67,10 +68,12 @@ jobs:
           EOF
 
       - name: Generate .SRCINFO
+        shell: bash
         run: |
-          set -euxo pipefail
-          chown -R builder:builder aur
-          su - builder -c "cd aur/rotorix-bin && makepkg --printsrcinfo > .SRCINFO"
+          set -euo pipefail
+          WORKDIR="$GITHUB_WORKSPACE/aur/rotorix-bin"
+          chown -R builder:builder "$WORKDIR"
+          su - builder -c "cd '$WORKDIR' && makepkg --printsrcinfo > .SRCINFO"
 
       - name: Upload .SRCINFO artifact
         uses: actions/upload-artifact@v4
