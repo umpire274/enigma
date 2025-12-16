@@ -51,46 +51,42 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION="${GITHUB_REF#refs/tags/rotorix-}"
           BIN_NAME="rotorix"
           TARGET="${{ matrix.target }}"
           TARGET_DIR="target/$TARGET/release"
+
+          STAGE_DIR="stage"
           DIST_DIR="dist"
 
-          mkdir -p "$DIST_DIR"
+          rm -rf "$STAGE_DIR" "$DIST_DIR"
+          mkdir -p "$STAGE_DIR" "$DIST_DIR"
 
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             BIN_PATH="$TARGET_DIR/$BIN_NAME.exe"
-
-            if [[ ! -f "$BIN_PATH" ]]; then
-              echo "❌ Binary not found: $BIN_PATH"
-              ls -lah "$TARGET_DIR"
-              exit 1
-            fi
-
-            cp "$BIN_PATH" "$DIST_DIR/"
-
-            powershell -Command \
-              "Compress-Archive -Path '$DIST_DIR\\$BIN_NAME.exe' -DestinationPath '$DIST_DIR\\$BIN_NAME-$VERSION-$TARGET.zip'"
-
-            # ⬅️ rimuove il binario raw
-            rm "$DIST_DIR/$BIN_NAME.exe"
-
           else
             BIN_PATH="$TARGET_DIR/$BIN_NAME"
+          fi
 
-            if [[ ! -f "$BIN_PATH" ]]; then
-              echo "❌ Binary not found: $BIN_PATH"
-              ls -lah "$TARGET_DIR"
-              exit 1
-            fi
+          if [[ ! -f "$BIN_PATH" ]]; then
+            echo "❌ Binary not found: $BIN_PATH"
+            ls -lah "$TARGET_DIR"
+            exit 1
+          fi
 
-            cp "$BIN_PATH" "$DIST_DIR/"
+          # Copy binary
+          cp "$BIN_PATH" "$STAGE_DIR/"
 
-            tar czf "$DIST_DIR/$BIN_NAME-$VERSION-$TARGET.tar.gz" -C "$DIST_DIR" "$BIN_NAME"
+          # Copy docs
+          cp README.md CHANGELOG.md LICENSE "$STAGE_DIR/"
 
-            # ⬅️ rimuove il binario raw
-            rm "$DIST_DIR/$BIN_NAME"
+          ARCHIVE_BASE="${BIN_NAME}-${VERSION}-${TARGET}"
+
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            powershell -Command \
+              "Compress-Archive -Path '$STAGE_DIR\\*' -DestinationPath '$DIST_DIR\\$ARCHIVE_BASE.zip'"
+          else
+            tar czf "$DIST_DIR/$ARCHIVE_BASE.tar.gz" -C "$STAGE_DIR" .
           fi
 
       - name: Upload artifact
