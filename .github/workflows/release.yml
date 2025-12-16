@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="${GITHUB_REF#refs/tags/rotorix-}"
+          VERSION="${GITHUB_REF#refs/tags/rotorix-v}"
           BIN_NAME="rotorix"
           TARGET="${{ matrix.target }}"
           TARGET_DIR="target/$TARGET/release"
